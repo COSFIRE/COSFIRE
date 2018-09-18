@@ -7,7 +7,7 @@ jobs:
   build:
 
     docker:
-      - image: mcasl/circleci_COSFIRE:0.0.1
+      - image: mcasl/circleci_cosfire:0.0.1
         environment:
         - USERNAME: "mcasl"
         - DOC_REPO: "COSFIRE"
