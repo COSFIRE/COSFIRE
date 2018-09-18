@@ -45,7 +45,7 @@ jobs:
           command: |
             . $HOME/venv/bin/activate
             mkdir test-reports
-            python -m pytest --junitxml=test-reports/junit.xml pipegraph/tests
+            python -m pytest --junitxml=test-reports/junit.xml $DOC_REPO/tests
 
       - store_test_results:
             path: test-reports
