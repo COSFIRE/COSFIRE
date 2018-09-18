@@ -5,14 +5,24 @@
 version: 2
 jobs:
   build:
-    docker:
-      - image: circleci/python:3.6
 
-    working_directory: ~/repo
+    docker:
+      - image: mcasl/circleci_COSFIRE:0.0.1
+        environment:
+        - USERNAME: "mcasl"
+        - DOC_REPO: "COSFIRE"
+        - DOC_URL: ""
+        - EMAIL: "manuel.castejon8@gmail.com"
+
+    working_directory: ~/COSFIRE
+
+    branches:
+      ignore:
+        - gh-pages
 
     steps:
       - checkout
-      # Download and cache dependencies
+
       - restore_cache:
           keys:
           - v1-dependencies-{{ checksum "requirements.txt" }}
@@ -20,26 +30,50 @@ jobs:
           - v1-dependencies-
 
       - run:
-          name: install dependencies
+          name: Install dependencies
           command: |
-            python3 -m venv venv
-            . venv/bin/activate
+            python3 -m venv %HOME/venv
+            . $HOME/venv/bin/activate
             pip install -r requirements.txt
       - save_cache:
           paths:
-            - ./venv
+            - $HOME/venv
           key: v1-dependencies-{{ checksum "requirements.txt" }}
-        
-      # run tests!
-      # this example uses Django's built-in test-runner
-      # other common Python testing frameworks include pytest and nose
-      # https://pytest.org
-      # https://nose.readthedocs.io
+
       - run:
-          name: run tests
+          name: Run tests
           command: |
-            . venv/bin/activate
-            python -m pytest cosfire/tests
+            . $HOME/venv/bin/activate
+            mkdir test-reports
+            python -m pytest --junitxml=test-reports/junit.xml pipegraph/tests
+
+      - store_test_results:
+            path: test-reports
+
       - store_artifacts:
-          path: test-reports
-          destination: test-reports
+            path: test-reports
+
+      - run:
+          name: Make HTML documentation
+          command: |
+            . $HOME/venv/bin/activate
+            python setup.py clean
+            python setup.py develop
+            set -o pipefail && cd doc && make html 2>&1 | tee ~/log.txt
+            sudo cat ~/log.txt && if grep -q "Traceback (most recent call last):" ~/log.txt; then false; else true; fi
+
+      - deploy:
+          name: Push Documentation to Github Pages
+          command: |
+            if [ "${CIRCLE_BRANCH}" == "master" ]; then
+                ci_scripts/circleci/push_doc.sh doc/_build/html
+            fi
+
+      - store_artifacts:
+          path: doc/_build/html
+          destination: ~/log.txt
+
+
+
+
+
