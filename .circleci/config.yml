@@ -21,6 +21,11 @@ jobs:
         - gh-pages
 
     steps:
+
+      - add_ssh_keys:
+          fingerprints:
+          - "61:7c:f5:37:a8:8d:61:c0:ca:fb:23:3a:7a:d7:06:c2"
+
       - checkout
 
       - restore_cache:
