@@ -9,10 +9,10 @@ jobs:
     docker:
       - image: mcasl/circleci_cosfire:0.0.1
         environment:
-        - USERNAME: "mcasl"
+        - USERNAME: "COSFIRE"
         - DOC_REPO: "COSFIRE"
         - DOC_URL: ""
-        - EMAIL: "manuel.castejon8@gmail.com"
+        - EMAIL: "cosfire.project@gmail.com"
 
     working_directory: ~/COSFIRE
 
