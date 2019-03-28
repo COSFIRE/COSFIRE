@@ -16,8 +16,8 @@ import DoGFilter as DoG
 
 
 class COSFIRE:
-    def __init__(self,Image):
-        self.patternImage=Image#pattern prototipe Image
+    def __init__(self, image):
+        self.patternImage=image#pattern prototipe Image
         self.nameFilter='NN'#basic filter (Gabor,DoG, etc.)
         self.coorX=0#center of COSFIRE
         self.coorY=0#" "
@@ -47,7 +47,7 @@ class COSFIRE:
     #2-Apply the COSFIRE filtler
     def applyCOSFIRE(self, Image,):
         inputImage=Image
-        #print "caluculando banco"
+        #print "calculando banco"
         self.tuple=self.computeTuples(inputImage) #2.1
         self.tuple=self.shiftResponses(self.tuple) #2.2
         #print "calculando respuesta"

@@ -10,14 +10,14 @@ import cv2
 # psi - phase offset
 # ktype - type and range of values that each pixel in the gabor kernel can hold
 
-def getGaborResponse(imagen,parametros,theta,lambd):
-    Resp={}
+def get_gabor_response(imagen, parametros, theta, lambd):
+    response={}
     for i in range(theta.size):
         for j in range(lambd.size):
             g_kernel = cv2.getGaborKernel(parametros[0], parametros[1], theta[i], lambd[j], parametros[4], parametros[5], ktype=cv2.CV_32F)
             #cv2.imshow("dsadad",imagen)
             filtered_img = cv2.filter2D(imagen, cv2.CV_32F, g_kernel)
-            Resp[(theta[i],lambd[j])]=filtered_img
+            response[(theta[i],lambd[j])]=filtered_img
     #Faltaria normalizar cada respuesta de Gabor
-    return Resp
+    return response
     
