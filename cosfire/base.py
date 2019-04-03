@@ -76,6 +76,7 @@ class Cosfire:
         self.ddepth = ddepth
 
         self._compute_response_to_filters = compute_responses_to_filters_dictionary[filter_name]
+        self._i_scale_cosfire = i_scale_cosfire_dictionary[filter_name]
         self.responses_to_image = {}
         self._cosfire_tuples = []  # Struct of filter COSFIRE (S_f)
         self.prototype_response_to_filters = {}  # Bank of responses pattern Image
@@ -321,23 +322,8 @@ class Cosfire:
         return output
 
     # (2.5) invariant to scale
-    def i_scale_cosfire(self, image, operator, respBank):
-        output = np.zeros_like(image)
-        for i in range(len(self.scale_invariant)):
-            operatorEscala = []
-            for tupla in operator:
-                if self.filter_name == 'Gabor':
-                    operatorEscala.append(CosfireCircularGaborTuple(ρ=tupla.ρ * self.scale_invariant[i],
-                                                                    ϕ=tupla.ϕ,
-                                                                    λ=tupla.λ * self.scale_invariant[i],
-                                                                    θ=tupla.θ))
-                elif self.filter_name == 'DoG':
-                    operatorEscala.append(CosfireCircularDoGTuple(ρ=tupla.ρ * self.scale_invariant[i],
-                                                                  ϕ=tupla.ϕ,
-                                                                  σ=tupla.σ * self.scale_invariant[i]))
-            outR = self.compute_response(respBank, operatorEscala)
-            output = np.maximum(outR, output)
-        return output
+    def i_scale_cosfire(self, image, operator, response_bank):
+        return self._i_scale_cosfire(self, image, operator, response_bank)
 
     # Compute response
     def compute_response(self, conj, operator):
@@ -391,4 +377,35 @@ def compute_response_to_filters__DoG(self, image):
 compute_responses_to_filters_dictionary = {
     'Gabor': compute_response_to_filters__Gabor,
     'DoG': compute_response_to_filters__DoG
+}
+
+
+def i_scale_cosfire__Circular_Gabor(self, image, operator, response_bank):
+    maximum_output = np.zeros_like(image)
+    for value in self.scale_invariant:
+        operatorEscala = [CosfireCircularGaborTuple(ρ=tupla.ρ * value,
+                                                    ϕ=tupla.ϕ,
+                                                    λ=tupla.λ * value,
+                                                    θ=tupla.θ) for tupla in operator]
+        output = self.compute_response(response_bank, operatorEscala)
+        maximum_output = np.maximum(output, maximum_output)
+    return maximum_output
+
+
+def i_scale_cosfire__Circular_DoG(self, image, operator, respBank):
+    output = np.zeros_like(image)
+    for i in range(len(self.scale_invariant)):
+        operatorEscala = []
+        for tupla in operator:
+            operatorEscala.append(CosfireCircularDoGTuple(ρ=tupla.ρ * self.scale_invariant[i],
+                                                          ϕ=tupla.ϕ,
+                                                          σ=tupla.σ * self.scale_invariant[i]))
+        outR = self.compute_response(respBank, operatorEscala)
+        output = np.maximum(outR, output)
+    return output
+
+
+i_scale_cosfire_dictionary = {
+    'Gabor': i_scale_cosfire__Circular_Gabor,
+    'DoG': i_scale_cosfire__Circular_DoG
 }
