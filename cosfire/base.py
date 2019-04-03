@@ -35,12 +35,12 @@ class Cosfire:
         self.center_y = center_y,
         self.rho_list = [] if rho_list is None else rho_list
         self.eta = eta
-        self.t1 = t1
+        self.threshold_1 = t1
         self.filter_parameters = [] if filter_parameters is None else filter_parameters  # Parameters of filter
-        self.t2 = t2
+        self.threshold_2 = t2
         self.alpha = alpha
         self.sigma0 = sigma0
-        self.t3 = t3
+        self.threshold_3 = t3
         self.reflection_invariant = reflection_invariant
         self.scale_invariant = [] if scale_invariant is None else scale_invariant
         self.rotation_invariant = [] if rotation_invariant is None else rotation_invariant
@@ -59,22 +59,14 @@ class Cosfire:
         self._cosfire_tuples = self.get_cosfire_tuples(self.prototype_response_to_filters, self.center_x, self.center_y)  # 1.3
 
     # 2-Apply the COSFIRE filtler
-    def transform(self, Image, ):
-        inputImage = Image
-        # print "calculando banco"
-        self.responses_to_image = self.compute_tuples(inputImage)  # 2.1
+    def transform(self, X ):
+        input_image = X
+        self.responses_to_image = self.compute_tuples(input_image)  # 2.1
         self.responses_to_image = self.shift_responses(self.responses_to_image)  # 2.2
-        # print "calculando respuesta"
-        output = self.i_reflexion_cosfire(inputImage, self._cosfire_tuples, self.responses_to_image)  # 2.3
-        mx = 0
-        for i in range(output.shape[0]):
-            for j in range(output.shape[1]):
-                if output[i][j] > mx:
-                    mx = output[i][j]
-        for i in range(output.shape[0]):
-            for j in range(output.shape[1]):
-                if output[i][j] < mx * self.t3:
-                    output[i][j] = 0
+        output = self.i_reflexion_cosfire(input_image, self._cosfire_tuples, self.responses_to_image)  # 2.3
+        maximum_output = output.max()
+        cv2.threshold(src=output, dst=output, thresh=self.threshold_3 * maximum_output, maxval=maximum_output,
+                      type=cv2.THRESH_TOZERO)
         return output
 
     # (1.1) Get response filter
@@ -88,18 +80,13 @@ class Cosfire:
 
     # (1.2) Suppres Resposes
     def suppress_responses_threshold_1(self):
-        eMax = []
-        for i in self.prototype_response_to_filters:
-            eMax.append(self.prototype_response_to_filters[i].max())
-        self.maximum_reponse = max(eMax)
-        for clav in self.prototype_response_to_filters:
-            for k in range(self.prototype_response_to_filters[clav].shape[0]):
-                for l in range(self.prototype_response_to_filters[clav].shape[1]):
-                    if self.prototype_response_to_filters[clav][k][l] < self.t1 * self.maximum_reponse:
-                        self.prototype_response_to_filters[clav][k][l] = 0
+        self.maximum_response = max([value.max() for key, value in self.prototype_response_to_filters.items()])
+        [cv2.threshold(src=image, dst=image, thresh=self.threshold_1 * self.maximum_response,
+                       maxval=self.maximum_response, type=cv2.THRESH_TOZERO)
+         for key, image in self.prototype_response_to_filters.items()]  # Desired collateral effect: thresholding self.responses_map
         return
 
-        # (1.3) Get descriptor set (Sf)
+    # (1.3) Get descriptor set (Sf)
 
     def get_cosfire_tuples(self, bank, xc, yc):
         operator = []
@@ -113,7 +100,7 @@ class Cosfire:
                         tupla = np.zeros(4)
                         for l in range(self.filter_parameters.lambd.size):
                             par = (self.filter_parameters.theta[k], self.filter_parameters.lambd[l])
-                            if self.prototype_response_to_filters[par][xc][yc] > self.maximum_reponse * self.t2:
+                            if self.prototype_response_to_filters[par][xc][yc] > self.maximum_reponse * self.threshold_2:
                                 ind = l
                                 val = self.prototype_response_to_filters[par][xc][yc]
                         if val > -1:
@@ -122,7 +109,7 @@ class Cosfire:
                             operator.append(tupla)
                 elif self.filter_name == 'DoG':
                     for k in range(self.filter_parameters.sigma.size):
-                        if self.prototype_response_to_filters[self.filter_parameters.sigma[k]][xc][yc] > self.maximum_reponse * self.t2:
+                        if self.prototype_response_to_filters[self.filter_parameters.sigma[k]][xc][yc] > self.maximum_reponse * self.threshold_2:
                             tupla = np.zeros(3)
                             tupla[2] = self.filter_parameters.sigma[k]
                             operator.append(tupla)
@@ -160,7 +147,7 @@ class Cosfire:
                             for m in range(self.filter_parameters.lambd.size):
                                 par = (self.filter_parameters.theta[l], self.filter_parameters.lambd[m])
                                 var = self.prototype_response_to_filters[par][direcciones[index[k]][0]][direcciones[index[k]][1]]
-                                if var > self.t2 * self.maximum_reponse:
+                                if var > self.threshold_2 * self.maximum_reponse:
                                     if mx < var:
                                         mx = var
                                         ind = m
@@ -174,7 +161,7 @@ class Cosfire:
                     elif self.filter_name == 'DoG':
                         for l in self.prototype_response_to_filters:
                             var = self.prototype_response_to_filters[l][direcciones[index[k]][0]][direcciones[index[k]][1]]
-                            if var > self.t2 * self.maximum_reponse:
+                            if var > self.threshold_2 * self.maximum_reponse:
                                 tupla = np.zeros(3)
                                 tupla[0] = self.rho_list[i]
                                 tupla[1] = index[k] * (np.pi / 180.0)
@@ -239,7 +226,7 @@ class Cosfire:
             t = unicos[i].shape
             for j in range(t[0]):
                 for k in range(t[1]):
-                    if unicos[i][j][k] < max * self.t1:
+                    if unicos[i][j][k] < max * self.threshold_1:
                         unicos[i][j][k] = 0
         unicos = self.blur_gaussian(unicos)  ##2.1.1 Hacemos Blur
         return unicos
