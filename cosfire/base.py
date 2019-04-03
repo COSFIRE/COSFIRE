@@ -321,21 +321,20 @@ class Cosfire:
         return output
 
     # (2.5) invariant to scale
-    def i_scale_cosfire(self, imagen, operator, respBank):
-        output = np.zeros((imagen.shape[0], imagen.shape[1]))
+    def i_scale_cosfire(self, image, operator, respBank):
+        output = np.zeros_like(image)
         for i in range(len(self.scale_invariant)):
             operatorEscala = []
             for tupla in operator:
                 if self.filter_name == 'Gabor':
-                    new_tupla = CosfireCircularGaborTuple(ρ=tupla.ρ * self.scale_invariant[i],
-                                                          ϕ=tupla.ϕ,
-                                                          λ=tupla.λ * self.scale_invariant[i],
-                                                          θ=tupla.θ)
+                    operatorEscala.append(CosfireCircularGaborTuple(ρ=tupla.ρ * self.scale_invariant[i],
+                                                                    ϕ=tupla.ϕ,
+                                                                    λ=tupla.λ * self.scale_invariant[i],
+                                                                    θ=tupla.θ))
                 elif self.filter_name == 'DoG':
-                    new_tupla = (tupla.ρ * self.scale_invariant[i],
-                                 tupla.ϕ,
-                                 tupla.σ * self.scale_invariant[i])
-                operatorEscala.append(new_tupla)
+                    operatorEscala.append(CosfireCircularDoGTuple(ρ=tupla.ρ * self.scale_invariant[i],
+                                                                  ϕ=tupla.ϕ,
+                                                                  σ=tupla.σ * self.scale_invariant[i]))
             outR = self.compute_response(respBank, operatorEscala)
             output = np.maximum(outR, output)
         return output
@@ -345,22 +344,19 @@ class Cosfire:
         nr = conj[operator[0]].shape[0]
         nc = conj[operator[0]].shape[1]
         resp = np.zeros((nr, nc))
-        rhoMax = 0
-        for i in range(len(operator)):
-            if operator[i][0] > rhoMax:
-                rhoMax = operator[i][0]
-        tupleweightσ = np.sqrt(-((rhoMax ** 2) / (2 * np.log(0.5))))
+        ρ_maximum = max([tupla.ρ for tupla in operator])
+        tuple_weight_σ = np.sqrt(-((ρ_maximum ** 2) / (2 * np.log(0.5))))
         for i in range(nr):
             for j in range(nc):
                 val = 1
                 suma = 0
-                for k in range(len(operator)):
-                    aux = np.exp(-(operator[k][0] ** 2) / (2 * tupleweightσ ** 2))
+                for tupla in operator:
+                    aux = np.exp(-(tupla.ρ ** 2) / (2 * tuple_weight_σ ** 2))
                     # if self.nameFilter=='DoG':
                     #    aux=1
                     suma += aux
                     wi = aux
-                    val *= (conj[operator[k]][i][j] ** wi)
+                    val *= (conj[tupla][i][j] ** wi)
                 val = np.power(val, 1.0 / suma)
                 resp[i][j] = val
         return resp
