@@ -11,6 +11,7 @@ import numpy as np
 import cv2
 from peakutils.peak import indexes
 from typing import NamedTuple
+import itertools
 
 
 class GaborParameters(NamedTuple):
@@ -33,6 +34,7 @@ class CosfireCircularGaborTuple(NamedTuple):
     ϕ: float
     λ: float
     θ: float
+
 
 class CosfireCircularDoGTuple(NamedTuple):
     ρ: float
@@ -191,54 +193,48 @@ class Cosfire:
                             var = self.prototype_response_to_filters[l][direcciones[index[k]][0]][
                                 direcciones[index[k]][1]]
                             if var > self.threshold_2 * self.maximum_reponse:
-                                tupla = np.zeros(3)
-                                tupla[0] = self.rho_list[i]
-                                tupla[1] = index[k] * (np.pi / 180.0)
-                                tupla[2] = l
+                                tupla = CosfireCircularDoGTuple(ρ=self.rho_list[i],
+                                                                ϕ=index[k] * (np.pi / 180.0),
+                                                                σ=l)
                                 operator.append(tupla)
         return operator
 
     # 2.1 For each tuple in the set Sf compute response
     def compute_tuples(self, inputImage):
         # Aqui llamar funcion que rellena parametros para invarianzas
-        ope = []
-        normal = []
-        for i in range(len(self._cosfire_tuples)):
-            normal.append(self._cosfire_tuples[i])
-        ope.append(normal)
+        ope = [self._cosfire_tuples[:]]
         if self.reflection_invariant == 1:
-            refleccion = []
-            for i in range(len(self._cosfire_tuples)):
-                a = (self._cosfire_tuples[i][0], np.pi - self._cosfire_tuples[i][1], self._cosfire_tuples[i][2],
-                     np.pi - self._cosfire_tuples[i][3])
-                refleccion.append(a)
-            ope.append(refleccion)
+            reflection = [CosfireCircularGaborTuple(ρ=tupla.ρ,
+                                                    ϕ=np.pi - tupla.ϕ,
+                                                    λ=tupla.λ,
+                                                    θ=np.pi - tupla.θ)
+                          for tupla in self._cosfire_tuples]
+            ope.append(reflection)
         for i in range(len(ope)):
-            for l in range(len(ope[i])):
+            for tupla in ope[i]:
                 for j in range(len(self.rotation_invariant)):
                     for k in range(len(self.scale_invariant)):
                         if self.filter_name == 'Gabor':
-                            aux = np.zeros(4)
-                            aux[0] = ope[i][l][0] * self.scale_invariant[k]
-                            aux[1] = ope[i][l][1] + self.rotation_invariant[j]
-                            aux[2] = ope[i][l][2] * self.scale_invariant[k]
-                            aux[3] = ope[i][l][3] + self.rotation_invariant[j]
-                            self._cosfire_tuples_invariant.append(aux)
+                            new_tupla = CosfireCircularGaborTuple(ρ=tupla.ρ * self.scale_invariant[k],
+                                                                  ϕ=tupla.ϕ + self.rotation_invariant[j],
+                                                                  λ=tupla.λ * self.scale_invariant[k],
+                                                                  θ=tupla.θ + self.rotation_invariant[j])
+
+                            self._cosfire_tuples_invariant.append(new_tupla)
                         elif self.filter_name == 'DoG':
-                            aux = np.zeros(3)
-                            aux[0] = ope[i][l][0] * self.scale_invariant[k]
-                            aux[1] = ope[i][l][1] + self.rotation_invariant[j]
-                            aux[2] = ope[i][l][2] * self.scale_invariant[k]
-                            self._cosfire_tuples_invariant.append(aux)
+                            new_tupla = CosfireCircularDoGTuple(ρ=tupla.ρ * self.scale_invariant[k],
+                                                                ϕ=tupla.ϕ + self.rotation_invariant[j],
+                                                                σ=tupla.σ * self.scale_invariant[k])
+                            self._cosfire_tuples_invariant.append(new_tupla)
         unicos = {}
         for i in range(len(self._cosfire_tuples_invariant)):
             if self.filter_name == 'Gabor':
-                a = (self._cosfire_tuples_invariant[i][3], self._cosfire_tuples_invariant[i][2])
-                if not a in unicos:
-                    l1 = np.array(1 * [a[0]])
-                    l2 = np.array(1 * [a[1]])
+                new_tupla = (self._cosfire_tuples_invariant[i][3], self._cosfire_tuples_invariant[i][2])
+                if not new_tupla in unicos:
+                    l1 = np.array(1 * [new_tupla[0]])
+                    l2 = np.array(1 * [new_tupla[1]])
                     tt = self._compute_response_to_filters(self, inputImage)
-                    unicos[a] = tt[a]
+                    unicos[new_tupla] = tt[new_tupla]
             elif self.filter_name == 'DoG':
                 if not self._cosfire_tuples_invariant[i][2] in unicos:
                     l1 = np.array(1 * [self._cosfire_tuples_invariant[i][2]])
@@ -264,20 +260,14 @@ class Cosfire:
     # (2.1.1)Blurr
     def blur_gaussian(self, bankFilters):
         dic = {}
-        for i in range(len(self._cosfire_tuples_invariant)):
+        for tupla in self._cosfire_tuples_invariant:
             if self.filter_name == 'Gabor':
-                a1 = (self._cosfire_tuples_invariant[i][3], self._cosfire_tuples_invariant[i][2])
-                σ = self.alpha * self._cosfire_tuples_invariant[i][0] + self.σ0
-                # cv2.imshow("wsw",cv2.GaussianBlur(bankFilters[a1], (15,15),σ, σ))
-                a2 = (self._cosfire_tuples_invariant[i][0], self._cosfire_tuples_invariant[i][1],
-                      self._cosfire_tuples_invariant[i][2], self._cosfire_tuples_invariant[i][3])
-                if not a2 in dic:
-                    dic[a2] = cv2.GaussianBlur(bankFilters[a1], (9, 9), σ, σ)
+                σ = self.alpha * tupla.ρ + self.σ0
+                if not tupla in dic:
+                    dic[tupla] = cv2.GaussianBlur(bankFilters[(tupla.θ, tupla.λ)], (9, 9), σ, σ)
             elif self.filter_name == 'DoG':
-                σ = self.alpha * self._cosfire_tuples_invariant[i][0] + self.σ0
-                a2 = (self._cosfire_tuples_invariant[i][0], self._cosfire_tuples_invariant[i][1],
-                      self._cosfire_tuples_invariant[i][2])
-                dic[a2] = cv2.GaussianBlur(bankFilters[self._cosfire_tuples_invariant[i][2]], (9, 9), σ, σ)
+                σ = self.alpha * tupla.ρ + self.σ0
+                dic[tupla] = cv2.GaussianBlur(bankFilters[tupla.σ], (9, 9), σ, σ)
         return dic
 
     # (2.2) Shift
@@ -377,35 +367,28 @@ class Cosfire:
 
 
 def compute_response_to_filters__Gabor(self, image):
-    parameters = self.filter_parameters
-    response_dict = dict()
-    # for theta, lambd in itertools.product(parameters.theta, parameters.lambd):
-    for i in range(parameters.θ.size):
-        for j in range(parameters.λ.size):
-            gabor_key = GaborKey(θ=parameters.θ[i], λ=parameters.λ[j])
-            response = cv2.filter2D(src=image,
-                                    ddepth=self.ddepth,
-                                    kernel=cv2.getGaborKernel(ksize=parameters.ksize,
-                                                              sigma=parameters.σ,
-                                                              theta=parameters.θ[i],
-                                                              lambd=parameters.λ[j],
-                                                              gamma=parameters.γ,
-                                                              psi=parameters.ψ,
-                                                              ktype=parameters.ktype))
-            response_dict[gabor_key] = response
-            # TODO: DANIEL ACOSTA COMMENT: Faltaria normalizar cada respuesta de Gabor
+    ksize, σ, θ_array, λ_array, γ, ψ, ktype = self.filter_parameters
+    response_dict = {GaborKey(θ=θ, λ=λ): cv2.filter2D(src=image,
+                                                      ddepth=self.ddepth,
+                                                      kernel=cv2.getGaborKernel(ksize=ksize,
+                                                                                sigma=σ,
+                                                                                theta=θ,
+                                                                                lambd=λ,
+                                                                                gamma=γ,
+                                                                                psi=ψ,
+                                                                                ktype=ktype))
+                     for θ, λ in itertools.product(θ_array, λ_array)}
+    # TODO: DANIEL ACOSTA COMMENT: Faltaria normalizar cada respuesta de Gabor
     return response_dict
 
 
 def compute_response_to_filters__DoG(self, image):
     response = {}
-    σ = self.filter_parameters.σ
-    for i in range(len(σ)):
-        # cv2.imshow("dfsf",imagen)
-        g1 = cv2.GaussianBlur(image, (3, 3), σ[i])
-        g2 = cv2.GaussianBlur(image, (3, 3), 0.5 * σ[i])
+    for σ in self.filter_parameters.σ:
+        g1 = cv2.GaussianBlur(image, (3, 3), σ)
+        g2 = cv2.GaussianBlur(image, (3, 3), 0.5 * σ)
         r = g1 - g2
-        response[sigma[i]] = r
+        response[σ] = r
     return response
 
 
