@@ -279,7 +279,7 @@ class Cosfire:
                 operatorI.append(a)
             out2 = self.i_rotation_cosfire(imagen, operatorI, respBank)
             # cv2.imshow("dsfsd222222",out2)
-            self.return_maximum(out2, out1)  ##Definir maxi
+            out1 = np.maximum(out2, out1)  ##Definir maxi
         return out1
 
     # (2.4) invariant to rotation
@@ -295,7 +295,7 @@ class Cosfire:
                     a = (operator[j][0], operator[j][1] + self.rotation_invariant[i], operator[j][2])
                 operatorRotacion.append(a)
             outR = self.i_scale_cosfire(imagen, operatorRotacion, respBank)
-            self.return_maximum(outR, output)
+            output = np.maximum(outR, output)
         return output
 
     # (2.5) invariant to scale
@@ -315,7 +315,7 @@ class Cosfire:
                         operator[j][2] * self.scale_invariant[i])
                 operatorEscala.append(a)
             outR = self.compute_response(respBank, operatorEscala)
-            self.return_maximum(outR, output)
+            output = np.maximum(outR, output)
         return output
 
     # Compute response
@@ -342,10 +342,4 @@ class Cosfire:
                 val = np.power(val, 1.0 / suma)
                 resp[i][j] = val
         return resp
-
-    # Select the maximum of two answers
-    def return_maximum(self, mat1, mat2):
-        for i in range(mat1.shape[0]):
-            for j in range(mat1.shape[1]):
-                mat2[i][j] = max(mat1[i][j], mat2[i][j])
 
