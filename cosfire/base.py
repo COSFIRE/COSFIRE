@@ -81,10 +81,10 @@ class Cosfire:
     def getResponseFilter(self):
         if self.filter_name == 'Gabor':
             return GF.get_gabor_response(self.pattern_image, self.filter_parameters,
-                                         self.filter_parameters[2], self.filter_parameters[3])
+                                         self.filter_parameters.theta, self.filter_parameters.lambd)
         elif self.filter_name == 'DoG':
             return DoG.get_difference_of_gaussians_response(self.pattern_image, self.filter_parameters,
-                                                            self.filter_parameters[0])
+                                                            self.filter_parameters.sigma)
 
     # (1.2) Suppres Resposes
     def suppresResponsesT1(self):
@@ -107,24 +107,24 @@ class Cosfire:
         for i in range(len(self.rho_list)):  # Iteramos en lista de radios
             if self.rho_list[i] == 0:  # Caso rho=0
                 if self.filter_name == 'Gabor':
-                    for k in range(self.filter_parameters[2].size):
+                    for k in range(self.filter_parameters.theta.size):
                         ind = 0
                         val = -1
                         tupla = np.zeros(4)
-                        for l in range(self.filter_parameters[3].size):
-                            par = (self.filter_parameters[2][k], self.filter_parameters[3][l])
+                        for l in range(self.filter_parameters.lambd.size):
+                            par = (self.filter_parameters.theta[k], self.filter_parameters.lambd[l])
                             if self.input[par][xc][yc] > self.maximum_reponse * self.t2:
                                 ind = l
                                 val = self.input[par][xc][yc]
                         if val > -1:
-                            tupla[2] = self.filter_parameters[3][ind]
-                            tupla[3] = self.filter_parameters[2][k]
+                            tupla[2] = self.filter_parameters.lambd[ind]
+                            tupla[3] = self.filter_parameters.theta[k]
                             operator.append(tupla)
                 elif self.filter_name == 'DoG':
-                    for k in range(self.filter_parameters[0].size):
-                        if self.input[self.filter_parameters[0][k]][xc][yc] > self.maximum_reponse * self.t2:
+                    for k in range(self.filter_parameters.sigma.size):
+                        if self.input[self.filter_parameters.sigma[k]][xc][yc] > self.maximum_reponse * self.t2:
                             tupla = np.zeros(3)
-                            tupla[2] = self.filter_parameters[0][k]
+                            tupla[2] = self.filter_parameters.sigma[k]
                             operator.append(tupla)
             elif self.rho_list[i] > 0:  # Caso rho>0
                 listMax = np.zeros(360)
@@ -154,11 +154,11 @@ class Cosfire:
                 index = np.array(index)
                 for k in range(index.size):
                     if self.filter_name == 'Gabor':
-                        for l in range(self.filter_parameters[2].size):
+                        for l in range(self.filter_parameters.theta.size):
                             mx = -1
                             ind = 0
-                            for m in range(self.filter_parameters[3].size):
-                                par = (self.filter_parameters[2][l], self.filter_parameters[3][m])
+                            for m in range(self.filter_parameters.lambd.size):
+                                par = (self.filter_parameters.theta[l], self.filter_parameters.lambd[m])
                                 var = self.input[par][direcciones[index[k]][0]][direcciones[index[k]][1]]
                                 if var > self.t2 * self.maximum_reponse:
                                     if mx < var:
@@ -168,8 +168,8 @@ class Cosfire:
                                 tupla = np.zeros(4)
                                 tupla[0] = self.rho_list[i]
                                 tupla[1] = index[k] * (np.pi / 180.0)
-                                tupla[2] = self.filter_parameters[3][ind]
-                                tupla[3] = self.filter_parameters[2][l]
+                                tupla[2] = self.filter_parameters.lambd[ind]
+                                tupla[3] = self.filter_parameters.theta[l]
                                 operator.append(tupla)
                     elif self.filter_name == 'DoG':
                         for l in self.input:
