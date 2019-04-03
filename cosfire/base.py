@@ -77,6 +77,7 @@ class Cosfire:
 
         self._compute_response_to_filters = compute_responses_to_filters_dictionary[filter_name]
         self._i_scale_cosfire = i_scale_cosfire_dictionary[filter_name]
+        self._i_rotation_cosfire = i_rotation_cosfire_dictionary[filter_name]
         self.responses_to_image = {}
         self._cosfire_tuples = []  # Struct of filter COSFIRE (S_f)
         self.prototype_response_to_filters = {}  # Bank of responses pattern Image
@@ -304,22 +305,8 @@ class Cosfire:
         return out1
 
     # (2.4) invariant to rotation
-    def i_rotation_cosfire(self, imagen, operator, respBank):
-        output = np.zeros((imagen.shape[0], imagen.shape[1]))
-        for i in range(len(self.rotation_invariant)):
-            operatorRotacion = []
-            for tupla in operator:
-                if self.filter_name == 'Gabor':
-                    new_tupla = CosfireCircularGaborTuple(ρ=tupla.ρ,
-                                                          ϕ=tupla.ϕ + self.rotation_invariant[i],
-                                                          λ=tupla.λ,
-                                                          θ=tupla.θ + self.rotation_invariant[i])
-                elif self.filter_name == 'DoG':
-                    new_tupla = (operator[j][0], operator[j][1] + self.rotation_invariant[i], operator[j][2])
-                operatorRotacion.append(new_tupla)
-            outR = self.i_scale_cosfire(imagen, operatorRotacion, respBank)
-            output = np.maximum(outR, output)
-        return output
+    def i_rotation_cosfire(self, image, operator, response_bank):
+        return self._i_rotation_cosfire(self, image, operator, response_bank)
 
     # (2.5) invariant to scale
     def i_scale_cosfire(self, image, operator, response_bank):
@@ -408,4 +395,32 @@ def i_scale_cosfire__Circular_DoG(self, image, operator, respBank):
 i_scale_cosfire_dictionary = {
     'Gabor': i_scale_cosfire__Circular_Gabor,
     'DoG': i_scale_cosfire__Circular_DoG
+}
+
+
+def i_rotation_cosfire__Circular_Gabor(self, image, operator, response_bank):
+    maximum_output = np.zeros_like(image)
+    for value in self.rotation_invariant:
+        operatorRotacion = [CosfireCircularGaborTuple(ρ=tupla.ρ,
+                                                      ϕ=tupla.ϕ + value,
+                                                      λ=tupla.λ,
+                                                      θ=tupla.θ + value)
+                            for tupla in operator]
+        output = self.i_scale_cosfire(image, operatorRotacion, response_bank)
+        maximum_output = np.maximum(output, maximum_output)
+    return maximum_output
+
+
+def i_rotation_cosfire__Circular_DoG(self, image, operator, response_bank):
+    maximum_output = np.zeros_like(image)
+    for value in self.rotation_invariant:
+        operatorRotacion = [CosfireCircularDoGTuple(ρ=tupla.ρ, ϕ=tupla.ϕ + value, σ=tupla.σ) for tupla in operator]
+        output = self.i_scale_cosfire(image, operatorRotacion, response_bank)
+        maximum_output = np.maximum(output, maximum_output)
+    return maximum_output
+
+
+i_rotation_cosfire_dictionary = {
+    'Gabor': i_rotation_cosfire__Circular_Gabor,
+    'DoG': i_rotation_cosfire__Circular_DoG
 }
