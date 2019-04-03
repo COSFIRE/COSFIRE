@@ -9,9 +9,7 @@
 
 import numpy as np
 import cv2
-import cosfire.GaborFilter as GF
 from peakutils.peak import indexes
-import cosfire.DoGFilter as DoG
 from typing import NamedTuple
 
 class GaborParameters(NamedTuple):
@@ -85,10 +83,10 @@ class Cosfire:
     # (1.1) Get response filter
     def get_prototype_response_to_filters(self):
         if self.filter_name == 'Gabor':
-            return GF.get_gabor_response(self.pattern_image, self.filter_parameters,
+            return get_gabor_response(self.pattern_image, self.filter_parameters,
                                          self.filter_parameters.θ, self.filter_parameters.λ)
         elif self.filter_name == 'DoG':
-            return DoG.get_difference_of_gaussians_response(self.pattern_image, self.filter_parameters,
+            return get_difference_of_gaussians_response(self.pattern_image, self.filter_parameters,
                                                             self.filter_parameters.σ)
 
     # (1.2) Suppres Resposes
@@ -220,7 +218,7 @@ class Cosfire:
                 if not a in unicos:
                     l1 = np.array(1 * [a[0]])
                     l2 = np.array(1 * [a[1]])
-                    tt = GF.get_gabor_response(inputImage, self.filter_parameters, l1, l2)
+                    tt = get_gabor_response(inputImage, self.filter_parameters, l1, l2)
                     unicos[a] = tt[a]
             elif self.filter_name == 'DoG':
                 if not self._cosfire_tuples_invariant[i][2] in unicos:
@@ -355,4 +353,29 @@ class Cosfire:
                 val = np.power(val, 1.0 / suma)
                 resp[i][j] = val
         return resp
+
+
+def get_gabor_response(imagen, parametros, theta, lambd):
+    response = {}
+    for i in range(theta.size):
+        for j in range(lambd.size):
+            g_kernel = cv2.getGaborKernel(parametros[0], parametros[1], theta[i], lambd[j], parametros[4],
+                                          parametros[5], ktype=cv2.CV_32F)
+            # cv2.imshow("dsadad",imagen)
+            filtered_img = cv2.filter2D(imagen, cv2.CV_32F, g_kernel)
+            response[(theta[i], lambd[j])] = filtered_img
+    # Faltaria normalizar cada respuesta de Gabor
+    return response
+
+
+def get_difference_of_gaussians_response(imagen, paremetros, sigma):
+    response={}
+    for i in range(len(sigma)):
+        #cv2.imshow("dfsf",imagen)
+        g1=cv2.GaussianBlur(imagen, (3,3), sigma[i])
+        g2=cv2.GaussianBlur(imagen, (3,3), 0.5*sigma[i])
+        r=g1-g2
+        response[sigma[i]]=r
+    return response
+
 
