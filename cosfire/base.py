@@ -36,7 +36,7 @@ class Cosfire:
                  filter_parameters=None,
                  t2=0,
                  alpha=0,
-                 σ0=0,
+                 sigma0=0,
                  t3=0,
                  reflection_invariant=False,
                  rotation_invariant=None,
@@ -46,12 +46,12 @@ class Cosfire:
         self.center_x = center_x
         self.center_y = center_y,
         self.rho_list = [] if rho_list is None else rho_list
-        self.eta = eta
+        self.η = eta   # TODO: unused!!!
         self.threshold_1 = t1
         self.filter_parameters = [] if filter_parameters is None else filter_parameters  # Parameters of filter
         self.threshold_2 = t2
         self.alpha = alpha
-        self.σ0 = σ0
+        self.σ0 = sigma0
         self.threshold_3 = t3
         self.reflection_invariant = reflection_invariant
         self.scale_invariant = [] if scale_invariant is None else scale_invariant
