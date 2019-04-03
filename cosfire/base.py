@@ -56,6 +56,7 @@ class Cosfire:
         self.scale_invariant = [] if scale_invariant is None else scale_invariant
         self.rotation_invariant = [] if rotation_invariant is None else rotation_invariant
 
+        self._compute_response_to_filters = compute_responses_to_filters_dictionary[filter_name]
         self.responses_to_image = {}
         self._cosfire_tuples = []  # Struct of filter COSFIRE (S_f)
         self.prototype_response_to_filters = {}  # Bank of responses pattern Image
@@ -64,8 +65,8 @@ class Cosfire:
 
     # 1-Configuration COSFIRE Filter
     def fit(self, pattern_image):
-        self.pattern_image = pattern_image
-        self.prototype_response_to_filters = self.get_prototype_response_to_filters()  # 1.1
+        self.prototype_pattern_image = pattern_image
+        self.prototype_response_to_filters = self.compute_response_to_filters(self.prototype_pattern_image)  # 1.1
         self.suppress_responses_threshold_1()  # 1.2
         self._cosfire_tuples = self.get_cosfire_tuples(self.prototype_response_to_filters, self.center_x, self.center_y)  # 1.3
 
@@ -81,14 +82,8 @@ class Cosfire:
         return output
 
     # (1.1) Get response filter
-    def get_prototype_response_to_filters(self):
-        if self.filter_name == 'Gabor':
-            return get_gabor_response(self.pattern_image, self.filter_parameters,
-                                         self.filter_parameters.θ, self.filter_parameters.λ)
-        elif self.filter_name == 'DoG':
-            return get_difference_of_gaussians_response(self.pattern_image, self.filter_parameters,
-                                                            self.filter_parameters.σ)
-
+    def compute_response_to_filters(self, image):
+            return self._compute_response_to_filters(self, image)
     # (1.2) Suppres Resposes
     def suppress_responses_threshold_1(self):
         self.maximum_response = max([value.max() for key, value in self.prototype_response_to_filters.items()])
@@ -131,8 +126,8 @@ class Cosfire:
                     yi = int(yc + np.floor(self.rho_list[i] * np.cos(phiList[k])))
                     xi = int(xc - np.floor(self.rho_list[i] * np.sin(phiList[k])))
                     val = 0
-                    nr = self.pattern_image.shape[0]
-                    nc = self.pattern_image.shape[1]
+                    nr = self.prototype_pattern_image.shape[0]
+                    nc = self.prototype_pattern_image.shape[1]
                     if xi >= 0 and yi >= 0 and xi < nr and yi < nc:
                         for l in self.prototype_response_to_filters:
                             if self.prototype_response_to_filters[l][xi][yi] > val:
@@ -218,12 +213,12 @@ class Cosfire:
                 if not a in unicos:
                     l1 = np.array(1 * [a[0]])
                     l2 = np.array(1 * [a[1]])
-                    tt = get_gabor_response(inputImage, self.filter_parameters, l1, l2)
+                    tt = self._compute_response_to_filters(self, inputImage)
                     unicos[a] = tt[a]
             elif self.filter_name == 'DoG':
                 if not self._cosfire_tuples_invariant[i][2] in unicos:
                     l1 = np.array(1 * [self._cosfire_tuples_invariant[i][2]])
-                    tt = DoG.get_difference_of_gaussians_response(inputImage, self.filter_parameters, l1)
+                    tt = compute_response_to_filters__DoG(inputImage, self.filter_parameters, l1)
                     unicos[self._cosfire_tuples_invariant[i][2]] = tt[self._cosfire_tuples_invariant[i][2]]
         max = 0
         for i in unicos:
@@ -355,27 +350,34 @@ class Cosfire:
         return resp
 
 
-def get_gabor_response(imagen, parametros, theta, lambd):
+def compute_response_to_filters__Gabor(self, image):
     response = {}
-    for i in range(theta.size):
-        for j in range(lambd.size):
-            g_kernel = cv2.getGaborKernel(parametros[0], parametros[1], theta[i], lambd[j], parametros[4],
+    parametros = self.filter_parameters
+    θ = parametros.θ
+    λ = parametros.λ
+    for i in range( θ.size):
+        for j in range(λ.size):
+            g_kernel = cv2.getGaborKernel(parametros[0], parametros[1], θ[i], λ[j], parametros[4],
                                           parametros[5], ktype=cv2.CV_32F)
             # cv2.imshow("dsadad",imagen)
-            filtered_img = cv2.filter2D(imagen, cv2.CV_32F, g_kernel)
-            response[(theta[i], lambd[j])] = filtered_img
+            filtered_img = cv2.filter2D(image, cv2.CV_32F, g_kernel)
+            response[(θ[i], λ[j])] = filtered_img
     # Faltaria normalizar cada respuesta de Gabor
     return response
 
 
-def get_difference_of_gaussians_response(imagen, paremetros, sigma):
+def compute_response_to_filters__DoG(self, image):
     response={}
-    for i in range(len(sigma)):
+    σ = self.filter_parameters.σ
+    for i in range(len(σ)):
         #cv2.imshow("dfsf",imagen)
-        g1=cv2.GaussianBlur(imagen, (3,3), sigma[i])
-        g2=cv2.GaussianBlur(imagen, (3,3), 0.5*sigma[i])
+        g1=cv2.GaussianBlur(image, (3,3),  σ[i])
+        g2=cv2.GaussianBlur(image, (3,3), 0.5* σ[i])
         r=g1-g2
         response[sigma[i]]=r
     return response
 
-
+compute_responses_to_filters_dictionary={
+    'Gabor': compute_response_to_filters__Gabor,
+    'DoG': compute_response_to_filters__DoG
+}
