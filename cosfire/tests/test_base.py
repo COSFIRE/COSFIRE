@@ -4,10 +4,10 @@ from numpy.testing import assert_almost_equal
 import logging
 
 import cv2
-from typing import NamedTuple
 from skimage.filters import gabor, gaussian
 from skimage import data
 from cosfire.base import (Cosfire,
+                          GaborParameters,
                           )
 
 from cosfire.function_filters import (FunctionFilter,
@@ -16,15 +16,6 @@ from cosfire.function_filters import (FunctionFilter,
 logging.basicConfig(level=logging.NOTSET)
 logger = logging.getLogger(__name__)
 
-
-class GaborParameters(NamedTuple):
-    ksize: tuple
-    sigma: float
-    theta: float
-    lambd: float
-    gamma: float
-    psi: float = np.pi * 0.5
-    ktype: int = cv2.CV_32F
 
 
 preset_1 = dict(filter_name="Gabor",
@@ -36,12 +27,13 @@ preset_1 = dict(filter_name="Gabor",
                 t2=0.75,
                 t3=0.9,
                 filter_parameters=GaborParameters(ksize=(10, 10),
-                                                  sigma=5,
-                                                  theta=np.array([0, np.pi / 2]),
-                                                  lambd=np.array([12]),
-                                                  gamma=0.5,
-                                                  psi=np.pi),
-                sigma0=0.67,
+                                                  σ=5,
+                                                  θ=np.array([0, np.pi / 2]),
+                                                  λ=np.array([12]),
+                                                  γ =0.5,
+                                                  ψ =np.pi,
+                                                  ktype=cv2.CV_32F),
+                σ0=0.67,
                 alpha=0.04,
                 reflection_invariant=0,
                 scale_invariant=[1],
@@ -62,7 +54,7 @@ preset_2 = dict(filter_name="Gabor",
                                    np.array([12]),
                                    0.5,
                                    np.pi],
-                sigma0=0.67,
+                σ0=0.67,
                 alpha=0.04,
                 reflection_invariant=True,
                 scale_invariant=[1],
@@ -83,7 +75,7 @@ preset_3 = dict(filter_name="Gabor",
                                    np.array([4]),
                                    0.5,
                                    np.pi / 2],
-                sigma0=0.67,
+                σ0=0.67,
                 alpha=0.04,
                 reflection_invariant=False,
                 scale_invariant=[1],
@@ -104,7 +96,7 @@ preset_6 = dict(filter_name="Gabor",
                                    0.8,
                                    0.5,
                                    np.pi / 2],
-                sigma0=0.83,
+                σ0=0.83,
                 alpha=0.1,
                 reflection_invariant=False,
                 scale_invariant=[1],

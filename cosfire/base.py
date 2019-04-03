@@ -12,7 +12,20 @@ import cv2
 import cosfire.GaborFilter as GF
 from peakutils.peak import indexes
 import cosfire.DoGFilter as DoG
+from typing import NamedTuple
 
+class GaborParameters(NamedTuple):
+    ksize: tuple
+    σ: float
+    θ: float
+    λ: float
+    γ : float
+    ψ : float = np.pi * 0.5
+    ktype: int = cv2.CV_32F
+
+class GaborKey(NamedTuple):
+    θ: float
+    λ: float
 
 class Cosfire:
     def __init__(self,
@@ -25,7 +38,7 @@ class Cosfire:
                  filter_parameters=None,
                  t2=0,
                  alpha=0,
-                 sigma0=0,
+                 σ0=0,
                  t3=0,
                  reflection_invariant=False,
                  rotation_invariant=None,
@@ -39,7 +52,7 @@ class Cosfire:
         self.filter_parameters = [] if filter_parameters is None else filter_parameters  # Parameters of filter
         self.threshold_2 = t2
         self.alpha = alpha
-        self.sigma0 = sigma0
+        self.σ0 = σ0
         self.threshold_3 = t3
         self.reflection_invariant = reflection_invariant
         self.scale_invariant = [] if scale_invariant is None else scale_invariant
@@ -73,10 +86,10 @@ class Cosfire:
     def get_prototype_response_to_filters(self):
         if self.filter_name == 'Gabor':
             return GF.get_gabor_response(self.pattern_image, self.filter_parameters,
-                                         self.filter_parameters.theta, self.filter_parameters.lambd)
+                                         self.filter_parameters.θ, self.filter_parameters.λ)
         elif self.filter_name == 'DoG':
             return DoG.get_difference_of_gaussians_response(self.pattern_image, self.filter_parameters,
-                                                            self.filter_parameters.sigma)
+                                                            self.filter_parameters.σ)
 
     # (1.2) Suppres Resposes
     def suppress_responses_threshold_1(self):
@@ -94,24 +107,24 @@ class Cosfire:
         for i in range(len(self.rho_list)):  # Iteramos en lista de radios
             if self.rho_list[i] == 0:  # Caso rho=0
                 if self.filter_name == 'Gabor':
-                    for k in range(self.filter_parameters.theta.size):
+                    for k in range(self.filter_parameters.θ.size):
                         ind = 0
                         val = -1
                         tupla = np.zeros(4)
-                        for l in range(self.filter_parameters.lambd.size):
-                            par = (self.filter_parameters.theta[k], self.filter_parameters.lambd[l])
+                        for l in range(self.filter_parameters.λ.size):
+                            par = (self.filter_parameters.θ[k], self.filter_parameters.λ[l])
                             if self.prototype_response_to_filters[par][xc][yc] > self.maximum_reponse * self.threshold_2:
                                 ind = l
                                 val = self.prototype_response_to_filters[par][xc][yc]
                         if val > -1:
-                            tupla[2] = self.filter_parameters.lambd[ind]
-                            tupla[3] = self.filter_parameters.theta[k]
+                            tupla[2] = self.filter_parameters.λ[ind]
+                            tupla[3] = self.filter_parameters.θ[k]
                             operator.append(tupla)
                 elif self.filter_name == 'DoG':
-                    for k in range(self.filter_parameters.sigma.size):
-                        if self.prototype_response_to_filters[self.filter_parameters.sigma[k]][xc][yc] > self.maximum_reponse * self.threshold_2:
+                    for k in range(self.filter_parameters.σ.size):
+                        if self.prototype_response_to_filters[self.filter_parameters.σ[k]][xc][yc] > self.maximum_reponse * self.threshold_2:
                             tupla = np.zeros(3)
-                            tupla[2] = self.filter_parameters.sigma[k]
+                            tupla[2] = self.filter_parameters.σ[k]
                             operator.append(tupla)
             elif self.rho_list[i] > 0:  # Caso rho>0
                 listMax = np.zeros(360)
@@ -141,11 +154,11 @@ class Cosfire:
                 index = np.array(index)
                 for k in range(index.size):
                     if self.filter_name == 'Gabor':
-                        for l in range(self.filter_parameters.theta.size):
+                        for l in range(self.filter_parameters.θ.size):
                             mx = -1
                             ind = 0
-                            for m in range(self.filter_parameters.lambd.size):
-                                par = (self.filter_parameters.theta[l], self.filter_parameters.lambd[m])
+                            for m in range(self.filter_parameters.λ.size):
+                                par = (self.filter_parameters.θ[l], self.filter_parameters.λ[m])
                                 var = self.prototype_response_to_filters[par][direcciones[index[k]][0]][direcciones[index[k]][1]]
                                 if var > self.threshold_2 * self.maximum_reponse:
                                     if mx < var:
@@ -155,8 +168,8 @@ class Cosfire:
                                 tupla = np.zeros(4)
                                 tupla[0] = self.rho_list[i]
                                 tupla[1] = index[k] * (np.pi / 180.0)
-                                tupla[2] = self.filter_parameters.lambd[ind]
-                                tupla[3] = self.filter_parameters.theta[l]
+                                tupla[2] = self.filter_parameters.λ[ind]
+                                tupla[3] = self.filter_parameters.θ[l]
                                 operator.append(tupla)
                     elif self.filter_name == 'DoG':
                         for l in self.prototype_response_to_filters:
@@ -237,15 +250,15 @@ class Cosfire:
         for i in range(len(self._cosfire_tuples_invariant)):
             if self.filter_name == 'Gabor':
                 a1 = (self._cosfire_tuples_invariant[i][3], self._cosfire_tuples_invariant[i][2])
-                sigma = self.alpha * self._cosfire_tuples_invariant[i][0] + self.sigma0
-                # cv2.imshow("wsw",cv2.GaussianBlur(bankFilters[a1], (15,15),sigma, sigma))
+                σ = self.alpha * self._cosfire_tuples_invariant[i][0] + self.σ0
+                # cv2.imshow("wsw",cv2.GaussianBlur(bankFilters[a1], (15,15),σ, σ))
                 a2 = (self._cosfire_tuples_invariant[i][0], self._cosfire_tuples_invariant[i][1], self._cosfire_tuples_invariant[i][2], self._cosfire_tuples_invariant[i][3])
                 if not a2 in dic:
-                    dic[a2] = cv2.GaussianBlur(bankFilters[a1], (9, 9), sigma, sigma)
+                    dic[a2] = cv2.GaussianBlur(bankFilters[a1], (9, 9), σ, σ)
             elif self.filter_name == 'DoG':
-                sigma = self.alpha * self._cosfire_tuples_invariant[i][0] + self.sigma0
+                σ = self.alpha * self._cosfire_tuples_invariant[i][0] + self.σ0
                 a2 = (self._cosfire_tuples_invariant[i][0], self._cosfire_tuples_invariant[i][1], self._cosfire_tuples_invariant[i][2])
-                dic[a2] = cv2.GaussianBlur(bankFilters[self._cosfire_tuples_invariant[i][2]], (9, 9), sigma, sigma)
+                dic[a2] = cv2.GaussianBlur(bankFilters[self._cosfire_tuples_invariant[i][2]], (9, 9), σ, σ)
         return dic
 
     # (2.2) Shift
@@ -327,13 +340,13 @@ class Cosfire:
         for i in range(len(operator)):
             if operator[i][0] > rhoMax:
                 rhoMax = operator[i][0]
-        tupleweightsigma = np.sqrt(-((rhoMax ** 2) / (2 * np.log(0.5))))
+        tupleweightσ = np.sqrt(-((rhoMax ** 2) / (2 * np.log(0.5))))
         for i in range(nr):
             for j in range(nc):
                 val = 1
                 suma = 0
                 for k in range(len(operator)):
-                    aux = np.exp(-(operator[k][0] ** 2) / (2 * tupleweightsigma ** 2))
+                    aux = np.exp(-(operator[k][0] ** 2) / (2 * tupleweightσ ** 2))
                     # if self.nameFilter=='DoG':
                     #    aux=1
                     suma += aux
