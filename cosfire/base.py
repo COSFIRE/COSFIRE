@@ -16,9 +16,9 @@ import cosfire.DoGFilter as DoG
 
 class Cosfire:
     def __init__(self,
-                 filter_name='NN',
-                 center_coordinate_x=0,
-                 center_coordinate_y=0,
+                 filter_name='Gabor',
+                 center_x=0,
+                 center_y=0,
                  rho_list=None,
                  eta=0,
                  t1=0,
@@ -31,8 +31,8 @@ class Cosfire:
                  rotation_invariant=None,
                  scale_invariant=None):
         self.filter_name = filter_name
-        self.center_coordinate_x = center_coordinate_x
-        self.center_coordinate_y = center_coordinate_y,
+        self.center_x = center_x
+        self.center_y = center_y,
         self.rho_list = [] if rho_list is None else rho_list
         self.eta = eta
         self.t1 = t1
@@ -46,17 +46,17 @@ class Cosfire:
         self.rotation_invariant = [] if rotation_invariant is None else rotation_invariant
 
         self.responses_to_image = {}
-        self.operator = []  # Struct of filter COSFIRE (S_f)
-        self.input = {}  # Bank of responses pattern Image
+        self._cosfire_tuples = []  # Struct of filter COSFIRE (S_f)
+        self.prototype_response_to_filters = {}  # Bank of responses pattern Image
         self.maximum_reponse = 0
-        self.operator1 = []  # operator invariant to rotation, escala and reflection
+        self._cosfire_tuples_invariant = []  # operator invariant to rotation, escala and reflection
 
     # 1-Configuration COSFIRE Filter
     def fit(self, pattern_image):
         self.pattern_image = pattern_image
-        self.input = self.getResponseFilter()  # 1.1
-        self.suppresResponsesT1()  # 1.2
-        self.operator = self.get_cosfire_tuples(self.input, self.center_coordinate_x, self.center_coordinate_y)  # 1.3
+        self.prototype_response_to_filters = self.get_prototype_response_to_filters()  # 1.1
+        self.suppress_responses_threshold_1()  # 1.2
+        self._cosfire_tuples = self.get_cosfire_tuples(self.prototype_response_to_filters, self.center_x, self.center_y)  # 1.3
 
     # 2-Apply the COSFIRE filtler
     def transform(self, Image, ):
@@ -65,7 +65,7 @@ class Cosfire:
         self.responses_to_image = self.compute_tuples(inputImage)  # 2.1
         self.responses_to_image = self.shift_responses(self.responses_to_image)  # 2.2
         # print "calculando respuesta"
-        output = self.i_reflexion_cosfire(inputImage, self.operator, self.responses_to_image)  # 2.3
+        output = self.i_reflexion_cosfire(inputImage, self._cosfire_tuples, self.responses_to_image)  # 2.3
         mx = 0
         for i in range(output.shape[0]):
             for j in range(output.shape[1]):
@@ -78,7 +78,7 @@ class Cosfire:
         return output
 
     # (1.1) Get response filter
-    def getResponseFilter(self):
+    def get_prototype_response_to_filters(self):
         if self.filter_name == 'Gabor':
             return GF.get_gabor_response(self.pattern_image, self.filter_parameters,
                                          self.filter_parameters.theta, self.filter_parameters.lambd)
@@ -87,16 +87,16 @@ class Cosfire:
                                                             self.filter_parameters.sigma)
 
     # (1.2) Suppres Resposes
-    def suppresResponsesT1(self):
+    def suppress_responses_threshold_1(self):
         eMax = []
-        for i in self.input:
-            eMax.append(self.input[i].max())
+        for i in self.prototype_response_to_filters:
+            eMax.append(self.prototype_response_to_filters[i].max())
         self.maximum_reponse = max(eMax)
-        for clav in self.input:
-            for k in range(self.input[clav].shape[0]):
-                for l in range(self.input[clav].shape[1]):
-                    if self.input[clav][k][l] < self.t1 * self.maximum_reponse:
-                        self.input[clav][k][l] = 0
+        for clav in self.prototype_response_to_filters:
+            for k in range(self.prototype_response_to_filters[clav].shape[0]):
+                for l in range(self.prototype_response_to_filters[clav].shape[1]):
+                    if self.prototype_response_to_filters[clav][k][l] < self.t1 * self.maximum_reponse:
+                        self.prototype_response_to_filters[clav][k][l] = 0
         return
 
         # (1.3) Get descriptor set (Sf)
@@ -113,16 +113,16 @@ class Cosfire:
                         tupla = np.zeros(4)
                         for l in range(self.filter_parameters.lambd.size):
                             par = (self.filter_parameters.theta[k], self.filter_parameters.lambd[l])
-                            if self.input[par][xc][yc] > self.maximum_reponse * self.t2:
+                            if self.prototype_response_to_filters[par][xc][yc] > self.maximum_reponse * self.t2:
                                 ind = l
-                                val = self.input[par][xc][yc]
+                                val = self.prototype_response_to_filters[par][xc][yc]
                         if val > -1:
                             tupla[2] = self.filter_parameters.lambd[ind]
                             tupla[3] = self.filter_parameters.theta[k]
                             operator.append(tupla)
                 elif self.filter_name == 'DoG':
                     for k in range(self.filter_parameters.sigma.size):
-                        if self.input[self.filter_parameters.sigma[k]][xc][yc] > self.maximum_reponse * self.t2:
+                        if self.prototype_response_to_filters[self.filter_parameters.sigma[k]][xc][yc] > self.maximum_reponse * self.t2:
                             tupla = np.zeros(3)
                             tupla[2] = self.filter_parameters.sigma[k]
                             operator.append(tupla)
@@ -136,9 +136,9 @@ class Cosfire:
                     nr = self.pattern_image.shape[0]
                     nc = self.pattern_image.shape[1]
                     if xi >= 0 and yi >= 0 and xi < nr and yi < nc:
-                        for l in self.input:
-                            if self.input[l][xi][yi] > val:
-                                val = self.input[l][xi][yi]
+                        for l in self.prototype_response_to_filters:
+                            if self.prototype_response_to_filters[l][xi][yi] > val:
+                                val = self.prototype_response_to_filters[l][xi][yi]
                     listMax[k] = val
                     direcciones.append((xi, yi))
                 ss = int(360 / 16)
@@ -159,7 +159,7 @@ class Cosfire:
                             ind = 0
                             for m in range(self.filter_parameters.lambd.size):
                                 par = (self.filter_parameters.theta[l], self.filter_parameters.lambd[m])
-                                var = self.input[par][direcciones[index[k]][0]][direcciones[index[k]][1]]
+                                var = self.prototype_response_to_filters[par][direcciones[index[k]][0]][direcciones[index[k]][1]]
                                 if var > self.t2 * self.maximum_reponse:
                                     if mx < var:
                                         mx = var
@@ -172,8 +172,8 @@ class Cosfire:
                                 tupla[3] = self.filter_parameters.theta[l]
                                 operator.append(tupla)
                     elif self.filter_name == 'DoG':
-                        for l in self.input:
-                            var = self.input[l][direcciones[index[k]][0]][direcciones[index[k]][1]]
+                        for l in self.prototype_response_to_filters:
+                            var = self.prototype_response_to_filters[l][direcciones[index[k]][0]][direcciones[index[k]][1]]
                             if var > self.t2 * self.maximum_reponse:
                                 tupla = np.zeros(3)
                                 tupla[0] = self.rho_list[i]
@@ -187,13 +187,13 @@ class Cosfire:
         # Aqui llamar funcion que rellena parametros para invarianzas
         ope = []
         normal = []
-        for i in range(len(self.operator)):
-            normal.append(self.operator[i])
+        for i in range(len(self._cosfire_tuples)):
+            normal.append(self._cosfire_tuples[i])
         ope.append(normal)
         if self.reflection_invariant == 1:
             refleccion = []
-            for i in range(len(self.operator)):
-                a = (self.operator[i][0], np.pi - self.operator[i][1], self.operator[i][2], np.pi - self.operator[i][3])
+            for i in range(len(self._cosfire_tuples)):
+                a = (self._cosfire_tuples[i][0], np.pi - self._cosfire_tuples[i][1], self._cosfire_tuples[i][2], np.pi - self._cosfire_tuples[i][3])
                 refleccion.append(a)
             ope.append(refleccion)
         for i in range(len(ope)):
@@ -206,27 +206,27 @@ class Cosfire:
                             aux[1] = ope[i][l][1] + self.rotation_invariant[j]
                             aux[2] = ope[i][l][2] * self.scale_invariant[k]
                             aux[3] = ope[i][l][3] + self.rotation_invariant[j]
-                            self.operator1.append(aux)
+                            self._cosfire_tuples_invariant.append(aux)
                         elif self.filter_name == 'DoG':
                             aux = np.zeros(3)
                             aux[0] = ope[i][l][0] * self.scale_invariant[k]
                             aux[1] = ope[i][l][1] + self.rotation_invariant[j]
                             aux[2] = ope[i][l][2] * self.scale_invariant[k]
-                            self.operator1.append(aux)
+                            self._cosfire_tuples_invariant.append(aux)
         unicos = {}
-        for i in range(len(self.operator1)):
+        for i in range(len(self._cosfire_tuples_invariant)):
             if self.filter_name == 'Gabor':
-                a = (self.operator1[i][3], self.operator1[i][2])
+                a = (self._cosfire_tuples_invariant[i][3], self._cosfire_tuples_invariant[i][2])
                 if not a in unicos:
                     l1 = np.array(1 * [a[0]])
                     l2 = np.array(1 * [a[1]])
                     tt = GF.get_gabor_response(inputImage, self.filter_parameters, l1, l2)
                     unicos[a] = tt[a]
             elif self.filter_name == 'DoG':
-                if not self.operator1[i][2] in unicos:
-                    l1 = np.array(1 * [self.operator1[i][2]])
+                if not self._cosfire_tuples_invariant[i][2] in unicos:
+                    l1 = np.array(1 * [self._cosfire_tuples_invariant[i][2]])
                     tt = DoG.get_difference_of_gaussians_response(inputImage, self.filter_parameters, l1)
-                    unicos[self.operator1[i][2]] = tt[self.operator1[i][2]]
+                    unicos[self._cosfire_tuples_invariant[i][2]] = tt[self._cosfire_tuples_invariant[i][2]]
         max = 0
         for i in unicos:
             t = unicos[i].shape
@@ -247,18 +247,18 @@ class Cosfire:
     # (2.1.1)Blurr
     def blur_gaussian(self, bankFilters):
         dic = {}
-        for i in range(len(self.operator1)):
+        for i in range(len(self._cosfire_tuples_invariant)):
             if self.filter_name == 'Gabor':
-                a1 = (self.operator1[i][3], self.operator1[i][2])
-                sigma = self.alpha * self.operator1[i][0] + self.sigma0
+                a1 = (self._cosfire_tuples_invariant[i][3], self._cosfire_tuples_invariant[i][2])
+                sigma = self.alpha * self._cosfire_tuples_invariant[i][0] + self.sigma0
                 # cv2.imshow("wsw",cv2.GaussianBlur(bankFilters[a1], (15,15),sigma, sigma))
-                a2 = (self.operator1[i][0], self.operator1[i][1], self.operator1[i][2], self.operator1[i][3])
+                a2 = (self._cosfire_tuples_invariant[i][0], self._cosfire_tuples_invariant[i][1], self._cosfire_tuples_invariant[i][2], self._cosfire_tuples_invariant[i][3])
                 if not a2 in dic:
                     dic[a2] = cv2.GaussianBlur(bankFilters[a1], (9, 9), sigma, sigma)
             elif self.filter_name == 'DoG':
-                sigma = self.alpha * self.operator1[i][0] + self.sigma0
-                a2 = (self.operator1[i][0], self.operator1[i][1], self.operator1[i][2])
-                dic[a2] = cv2.GaussianBlur(bankFilters[self.operator1[i][2]], (9, 9), sigma, sigma)
+                sigma = self.alpha * self._cosfire_tuples_invariant[i][0] + self.sigma0
+                a2 = (self._cosfire_tuples_invariant[i][0], self._cosfire_tuples_invariant[i][1], self._cosfire_tuples_invariant[i][2])
+                dic[a2] = cv2.GaussianBlur(bankFilters[self._cosfire_tuples_invariant[i][2]], (9, 9), sigma, sigma)
         return dic
 
     # (2.2) Shift
