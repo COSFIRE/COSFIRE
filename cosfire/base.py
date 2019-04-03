@@ -40,7 +40,8 @@ class Cosfire:
                  t3=0,
                  reflection_invariant=False,
                  rotation_invariant=None,
-                 scale_invariant=None):
+                 scale_invariant=None,
+                 ddepth=cv2.CV_32F):
         self.filter_name = filter_name
         self.center_x = center_x
         self.center_y = center_y,
@@ -55,6 +56,7 @@ class Cosfire:
         self.reflection_invariant = reflection_invariant
         self.scale_invariant = [] if scale_invariant is None else scale_invariant
         self.rotation_invariant = [] if rotation_invariant is None else rotation_invariant
+        self.ddepth = ddepth
 
         self._compute_response_to_filters = compute_responses_to_filters_dictionary[filter_name]
         self.responses_to_image = {}
@@ -351,19 +353,24 @@ class Cosfire:
 
 
 def compute_response_to_filters__Gabor(self, image):
-    response = {}
-    parametros = self.filter_parameters
-    θ = parametros.θ
-    λ = parametros.λ
-    for i in range( θ.size):
-        for j in range(λ.size):
-            g_kernel = cv2.getGaborKernel(parametros[0], parametros[1], θ[i], λ[j], parametros[4],
-                                          parametros[5], ktype=cv2.CV_32F)
-            # cv2.imshow("dsadad",imagen)
-            filtered_img = cv2.filter2D(image, cv2.CV_32F, g_kernel)
-            response[(θ[i], λ[j])] = filtered_img
-    # Faltaria normalizar cada respuesta de Gabor
-    return response
+    parameters = self.filter_parameters
+    response_dict = dict()
+    # for theta, lambd in itertools.product(parameters.theta, parameters.lambd):
+    for i in range(parameters.θ.size):
+        for j in range(parameters.λ.size):
+            gabor_key = GaborKey(θ=parameters.θ[i], λ=parameters.λ[j])
+            response = cv2.filter2D(src=image,
+                                    ddepth=self.ddepth,
+                                    kernel=cv2.getGaborKernel(ksize=parameters.ksize,
+                                                              sigma=parameters.σ,
+                                                              theta=parameters.θ[i],
+                                                              lambd=parameters.λ[j],
+                                                              gamma=parameters.γ,
+                                                              psi=parameters.ψ,
+                                                              ktype=parameters.ktype))
+            response_dict[gabor_key] = response
+            # TODO: DANIEL ACOSTA COMMENT: Faltaria normalizar cada respuesta de Gabor
+    return response_dict
 
 
 def compute_response_to_filters__DoG(self, image):
