@@ -7,6 +7,7 @@ import cv2
 from skimage.filters import gabor, gaussian
 from skimage import data
 from cosfire.base import (Cosfire,
+                          CosfireCircularGaborTuple,
                           GaborParameters,
                           )
 
@@ -15,8 +16,6 @@ from cosfire.function_filters import (FunctionFilter,
 
 logging.basicConfig(level=logging.NOTSET)
 logger = logging.getLogger(__name__)
-
-
 
 preset_1 = dict(filter_name="Gabor",
                 center_x=166,
@@ -30,8 +29,8 @@ preset_1 = dict(filter_name="Gabor",
                                                   σ=5,
                                                   θ=np.array([0, np.pi / 2]),
                                                   λ=np.array([12]),
-                                                  γ =0.5,
-                                                  ψ =np.pi,
+                                                  γ=0.5,
+                                                  ψ=np.pi,
                                                   ktype=cv2.CV_32F),
                 sigma0=0.67,
                 alpha=0.04,
@@ -125,7 +124,7 @@ class TestCosfire(unittest.TestCase):
     def setUp(self):
         self.pattern = 'media/patron.1'
 
-    def test_COSFIRE(self):
+    def test_cosfire__preset_1(self):
         im1 = cv2.imread("media/patron1.jpg", 0)
         a = Cosfire(**preset_1)
         a.fit(im1)
@@ -135,3 +134,58 @@ class TestCosfire(unittest.TestCase):
         # cv2.imshow("Response", r)
         expected = np.load('media/test_cosfire__preset_1_expected.npy')
         assert_almost_equal(r, expected)
+
+    def test_shift_responses(self):
+        specific_image = np.array([[3, 3, 3, 3, 3],
+                                   [3, 2, 2, 2, 3],
+                                   [3, 2, 1, 2, 3],
+                                   [3, 2, 2, 2, 3],
+                                   [3, 3, 3, 3, 3]], dtype=np.float32)
+        tupla_collection = [CosfireCircularGaborTuple(ρ=1, ϕ=0, λ=0.1, θ=0),
+                            CosfireCircularGaborTuple(ρ=1, ϕ=np.pi * 0.5, λ=0.1, θ=0),
+                            CosfireCircularGaborTuple(ρ=1, ϕ=np.pi, λ=0.1, θ=0),
+                            CosfireCircularGaborTuple(ρ=1, ϕ=np.pi * 1.5, λ=0.1, θ=0),
+                            ]
+        response_collection = {tupla: specific_image for tupla in tupla_collection}
+        cosfire_filter = Cosfire(**preset_1)
+        result_collection = {key: cosfire_filter.shift_responses({key: response})[key]
+                             for key, response in response_collection.items()}
+        expected_collection = {
+            CosfireCircularGaborTuple(ρ=1, ϕ=0, λ=0.1, θ=0): np.array([[3, 3, 3, 3, 0],
+                                                                       [2, 2, 2, 3, 0],
+                                                                       [2, 1, 2, 3, 0],
+                                                                       [2, 2, 2, 3, 0],
+                                                                       [3, 3, 3, 3, 0]], dtype=np.float32),
+            CosfireCircularGaborTuple(ρ=1, ϕ=np.pi * 0.5, λ=0.1, θ=0): np.array([[0., 0., 0., 0., 0.],
+                                                                                 [3., 3., 3., 3., 3.],
+                                                                                 [3., 2., 2., 2., 3.],
+                                                                                 [3., 2., 1., 2., 3.],
+                                                                                 [3., 2., 2., 2., 3.]],
+                                                                                dtype=np.float32),
+            CosfireCircularGaborTuple(ρ=1, ϕ=np.pi, λ=0.1, θ=0): np.array([[0., 3., 3., 3., 3.],
+                                                                           [0., 3., 2., 2., 2.],
+                                                                           [0., 3., 2., 1., 2.],
+                                                                           [0., 3., 2., 2., 2.],
+                                                                           [0., 3., 3., 3., 3.]], dtype=np.float32),
+            CosfireCircularGaborTuple(ρ=1, ϕ=np.pi * 1.5, λ=0.1, θ=0): np.array([[3., 2., 2., 2., 3.],
+                                                                                 [3., 2., 1., 2., 3.],
+                                                                                 [3., 2., 2., 2., 3.],
+                                                                                 [3., 3., 3., 3., 3.],
+                                                                                 [0., 0., 0., 0., 0.]],
+                                                                                dtype=np.float32), }
+
+        assert_almost_equal(result_collection[CosfireCircularGaborTuple(ρ=1, ϕ=np.pi, λ=0.1, θ=0)],
+                            expected_collection[CosfireCircularGaborTuple(ρ=1, ϕ=np.pi, λ=0.1, θ=0)])
+
+        assert_almost_equal(result_collection[CosfireCircularGaborTuple(ρ=1, ϕ=0, λ=0.1, θ=0)],
+                            expected_collection[CosfireCircularGaborTuple(ρ=1, ϕ=0, λ=0.1, θ=0)])
+
+
+        assert_almost_equal(result_collection[CosfireCircularGaborTuple(ρ=1, ϕ=np.pi * 0.5, λ=0.1, θ=0)],
+                            expected_collection[CosfireCircularGaborTuple(ρ=1, ϕ=np.pi * 0.5, λ=0.1, θ=0)])
+
+        assert_almost_equal(result_collection[CosfireCircularGaborTuple(ρ=1, ϕ=np.pi * 1.5, λ=0.1, θ=0)],
+                            expected_collection[CosfireCircularGaborTuple(ρ=1, ϕ=np.pi * 1.5, λ=0.1, θ=0)])
+
+        # for key, result in result_collection.items():
+        #     assert_almost_equal(result, expected_collection[key])

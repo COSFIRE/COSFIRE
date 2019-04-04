@@ -267,22 +267,12 @@ class Cosfire:
         response_maps = {}
         for tupla, response in resp.items():
             rows, cols = response.shape
-            x = tupla.ρ * np.sin(np.pi + tupla.ϕ)
-            y = tupla.ρ * np.cos(np.pi + tupla.ϕ)
-            # TODO: change this code in order to use opencv similarly to this:
-            # M = np.float32([[1, 0, -x], [0, 1, y]])
-            # dst = cv2.warpAffine(response, M, (cols, rows))
-            # response_maps[tupla] = dst
-            nw = np.copy(response)
-            for k in range(rows):
-                for l in range(cols):
-                    xx = int(k + x)
-                    yy = int(l - y)
-                    if xx >= 0 and xx < rows and yy >= 0 and yy < cols:
-                        nw[k][l] = response[xx][yy]
-                    else:
-                        nw[k][l] = 0
-            response_maps[tupla] = nw
+            x = -tupla.ρ * np.cos(tupla.ϕ)
+            y = tupla.ρ * np.sin(tupla.ϕ)
+            M = np.float32([[1, 0, x],
+                            [0, 1, y]])
+            dst = cv2.warpAffine(response, M, (cols, rows), borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+            response_maps[tupla] = dst
         return response_maps
 
     # (2.3) invariant under reflection
