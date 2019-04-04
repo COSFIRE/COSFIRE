@@ -64,7 +64,7 @@ class Cosfire:
         self.search_strategy = search_strategy
         self.center_x = center_x
         self.center_y = center_y,
-        self.rho_list = [] if rho_list is None else rho_list
+        self.ρ_list = [] if rho_list is None else rho_list
         self.η = eta  # TODO: unused!!!
         self.threshold_1 = t1
         self.filter_parameters = [] if filter_parameters is None else filter_parameters  # Parameters of filter
@@ -121,47 +121,34 @@ class Cosfire:
 
     # (1.3) Get descriptor set (Sf)
 
-    def get_cosfire_tuples(self, bank, xc, yc):
+    def get_cosfire_tuples(self, bank, center_x, center_y):
         operator = []
         phiList = np.arange(360) * np.pi / 180.0  # Discretizacion del circulo
-        for i in range(len(self.rho_list)):  # Iteramos en lista de radios
-            if self.rho_list[i] == 0:  # Caso rho=0
+        for ρ in self.ρ_list:  # Iteramos en lista de radios
+            if ρ == 0:  # Caso rho=0
                 if self.filter_name == 'Gabor':
-                    for k in range(self.filter_parameters.θ.size):
-                        ind = 0
-                        val = -1
-                        for l in range(self.filter_parameters.λ.size):
-                            par = (self.filter_parameters.θ[k], self.filter_parameters.λ[l])
-                            if self.prototype_response_to_filters[par][xc][
-                                yc] > self.maximum_reponse * self.threshold_2:
-                                ind = l
-                                val = self.prototype_response_to_filters[par][xc][yc]
-                        if val > -1:
-                            tupla = CosfireCircularGaborTuple(ρ=0,
-                                                              ϕ=0,
-                                                              λ=self.filter_parameters.λ[ind],
-                                                              θ=self.filter_parameters.θ[k])
-                            operator.append(tupla)
+                    for θ, λ in itertools.product(self.filter_parameters.θ, self.filter_parameters.λ):
+                        response_at_center = self.prototype_response_to_filters[GaborKey(θ=θ, λ=λ)][center_x][center_y]
+                        if response_at_center > self.maximum_reponse * self.threshold_2:
+                            operator.append(CosfireCircularGaborTuple(ρ=0, ϕ=0, λ=λ, θ=θ))
                 elif self.filter_name == 'DoG':
-                    for k in range(self.filter_parameters.σ.size):
-                        if self.prototype_response_to_filters[self.filter_parameters.σ[k]][xc][
-                            yc] > self.maximum_reponse * self.threshold_2:
-                            tupla = CosfireCircularDoGTuple(ρ=0, ϕ=0, σ=self.filter_parameters.σ[k])
-                            operator.append(tupla)
-            elif self.rho_list[i] > 0:  # Caso rho>0
+                    for σ in self.filter_parameters.σ:
+                        if self.prototype_response_to_filters[σ][center_x][center_y] > self.maximum_reponse * self.threshold_2:
+                            operator.append(CosfireCircularDoGTuple(ρ=0, ϕ=0, σ=σ))
+            elif ρ > 0:  # Caso rho>0
                 listMax = np.zeros(360)
                 direcciones = []
                 for k in range(phiList.size):
-                    yi = int(yc + np.floor(self.rho_list[i] * np.cos(phiList[k])))
-                    xi = int(xc - np.floor(self.rho_list[i] * np.sin(phiList[k])))
-                    val = 0
+                    yi = int(center_y + np.floor(ρ * np.cos(phiList[k])))
+                    xi = int(center_x - np.floor(ρ * np.sin(phiList[k])))
+                    response_at_center = 0
                     nr = self.prototype_pattern_image.shape[0]
                     nc = self.prototype_pattern_image.shape[1]
                     if xi >= 0 and yi >= 0 and xi < nr and yi < nc:
                         for l in self.prototype_response_to_filters:
-                            if self.prototype_response_to_filters[l][xi][yi] > val:
-                                val = self.prototype_response_to_filters[l][xi][yi]
-                    listMax[k] = val
+                            if self.prototype_response_to_filters[l][xi][yi] > response_at_center:
+                                response_at_center = self.prototype_response_to_filters[l][xi][yi]
+                    listMax[k] = response_at_center
                     direcciones.append((xi, yi))
                 ss = int(360 / 16)
                 # nn=np.arange(360)
@@ -188,7 +175,7 @@ class Cosfire:
                                         mx = var
                                         ind = m
                             if mx != -1:
-                                tupla = CosfireCircularGaborTuple(ρ=self.rho_list[i],
+                                tupla = CosfireCircularGaborTuple(ρ=ρ,
                                                                   ϕ=index[k] * (np.pi / 180.0),
                                                                   λ=self.filter_parameters.λ[ind],
                                                                   θ=self.filter_parameters.θ[l])
@@ -198,7 +185,7 @@ class Cosfire:
                             var = self.prototype_response_to_filters[l][direcciones[index[k]][0]][
                                 direcciones[index[k]][1]]
                             if var > self.threshold_2 * self.maximum_reponse:
-                                tupla = CosfireCircularDoGTuple(ρ=self.rho_list[i],
+                                tupla = CosfireCircularDoGTuple(ρ=ρ,
                                                                 ϕ=index[k] * (np.pi / 180.0),
                                                                 σ=l)
                                 operator.append(tupla)

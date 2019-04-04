@@ -126,10 +126,11 @@ class TestCosfire(unittest.TestCase):
 
     def test_cosfire__preset_1(self):
         im1 = cv2.imread("media/patron1.jpg", 0)
-        a = Cosfire(**preset_1)
-        a.fit(im1)
         im2 = cv2.imread("media/prueba1.jpg", 0)
-        r = a.transform(im2)
+        for iter in range(1):
+            a = Cosfire(**preset_1)
+            a.fit(im1)
+            r = a.transform(im2)
         # viewPattern(r, im2, 20)
         # cv2.imshow("Response", r)
         expected = np.load('media/test_cosfire__preset_1_expected.npy')
