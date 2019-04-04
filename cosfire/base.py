@@ -242,20 +242,10 @@ class Cosfire:
                     l1 = np.array(1 * [tupla[2]])
                     tt = compute_response_to_filters__DoG(inputImage, self.filter_parameters, l1)
                     unicos[tupla[2]] = tt[tupla[2]]
-        max = 0
-        for tupla in unicos:
-            t = unicos[tupla].shape
-            for j in range(t[0]):
-                for k in range(t[1]):
-                    sig = unicos[tupla][j][k]
-                    if sig > max:
-                        max = unicos[tupla][j][k]
-        for tupla in unicos:
-            t = unicos[tupla].shape
-            for j in range(t[0]):
-                for k in range(t[1]):
-                    if unicos[tupla][j][k] < max * self.threshold_1:
-                        unicos[tupla][j][k] = 0
+        maximum = max([value.max() for key, value in unicos.items()])
+        [cv2.threshold(src=image, dst=image, thresh=self.threshold_1 * maximum,
+                       maxval=maximum, type=cv2.THRESH_TOZERO)
+         for key, image in unicos.items()]
         unicos = self.blur_gaussian(unicos)  ##2.1.1 Hacemos Blur
         return unicos
 
@@ -274,23 +264,26 @@ class Cosfire:
 
     # (2.2) Shift
     def shift_responses(self, resp):
-        Resp = {}
-        for clave, img in resp.items():
-            nr = img.shape[0]
-            nc = img.shape[1]
-            x = clave[0] * np.sin(np.pi + clave[1])
-            y = clave[0] * np.cos(np.pi + clave[1])
-            nw = np.copy(img)
-            for k in range(nr):
-                for l in range(nc):
+        response_maps = {}
+        for tupla, response in resp.items():
+            rows, cols = response.shape
+            x = tupla.ρ * np.sin(np.pi + tupla.ϕ)
+            y = tupla.ρ * np.cos(np.pi + tupla.ϕ)
+            # TODO: change this code in order to use opencv similarly to this:
+            # M = np.float32([[1, 0, -x], [0, 1, y]])
+            # dst = cv2.warpAffine(response, M, (cols, rows))
+            # response_maps[tupla] = dst
+            nw = np.copy(response)
+            for k in range(rows):
+                for l in range(cols):
                     xx = int(k + x)
                     yy = int(l - y)
-                    if xx >= 0 and xx < nr and yy >= 0 and yy < nc:
-                        nw[k][l] = img[xx][yy]
+                    if xx >= 0 and xx < rows and yy >= 0 and yy < cols:
+                        nw[k][l] = response[xx][yy]
                     else:
                         nw[k][l] = 0
-            Resp[clave] = nw
-        return Resp
+            response_maps[tupla] = nw
+        return response_maps
 
     # (2.3) invariant under reflection
     def i_reflection_cosfire(self, image, operator, response_bank):
