@@ -123,9 +123,9 @@ class Cosfire:
 
     def get_cosfire_tuples(self, bank, center_x, center_y):
         operator = []
-        phiList = np.arange(360) * np.pi / 180.0  # Discretizacion del circulo
-        for ρ in self.ρ_list:  # Iteramos en lista de radios
-            if ρ == 0:  # Caso rho=0
+        ϕ_array = np.linspace(start=0, stop=2 * np.pi, num=360, endpoint=False)
+        for ρ in self.ρ_list:
+            if ρ == 0:
                 if self.filter_name == 'Gabor':
                     for θ, λ in itertools.product(self.filter_parameters.θ, self.filter_parameters.λ):
                         response_at_center = self.prototype_response_to_filters[GaborKey(θ=θ, λ=λ)][center_x][center_y]
@@ -133,41 +133,38 @@ class Cosfire:
                             operator.append(CosfireCircularGaborTuple(ρ=0, ϕ=0, λ=λ, θ=θ))
                 elif self.filter_name == 'DoG':
                     for σ in self.filter_parameters.σ:
-                        if self.prototype_response_to_filters[σ][center_x][center_y] > self.maximum_reponse * self.threshold_2:
+                        response_at_center = self.prototype_response_to_filters[σ][center_x][center_y]
+                        if response_at_center > self.maximum_reponse * self.threshold_2:
                             operator.append(CosfireCircularDoGTuple(ρ=0, ϕ=0, σ=σ))
-            elif ρ > 0:  # Caso rho>0
+            elif ρ > 0:
                 listMax = np.zeros(360)
                 direcciones = []
-                for k in range(phiList.size):
-                    yi = int(center_y + np.floor(ρ * np.cos(phiList[k])))
-                    xi = int(center_x - np.floor(ρ * np.sin(phiList[k])))
+                for k, ϕ in enumerate(ϕ_array):
+                    yi = int(center_y + np.floor(ρ * np.cos(ϕ)))
+                    xi = int(center_x - np.floor(ρ * np.sin(ϕ)))
                     response_at_center = 0
-                    nr = self.prototype_pattern_image.shape[0]
-                    nc = self.prototype_pattern_image.shape[1]
-                    if xi >= 0 and yi >= 0 and xi < nr and yi < nc:
-                        for l in self.prototype_response_to_filters:
-                            if self.prototype_response_to_filters[l][xi][yi] > response_at_center:
-                                response_at_center = self.prototype_response_to_filters[l][xi][yi]
+                    rows, cols = self.prototype_pattern_image.shape
+                    if xi >= 0 and yi >= 0 and xi < rows and yi < cols:
+                        for gabor_key, response in self.prototype_response_to_filters.items():
+                            if response[xi][yi] > response_at_center:
+                                response_at_center = response[xi][yi]
                     listMax[k] = response_at_center
                     direcciones.append((xi, yi))
                 ss = int(360 / 16)
-                # nn=np.arange(360)
-                # plt.plot(nn,listMax)
                 if len(np.unique(listMax)) == 1:
                     continue
                 listMax1 = np.zeros(listMax.size + 1)
-                for p in range(listMax.size):
-                    listMax1[p + 1] = listMax[p]
+                listMax1[1:] = listMax.copy()
                 index = indexes(listMax1, thres=0.2, min_dist=ss)
                 index = list(index - 1)
                 index = np.array(index)
                 for k in range(index.size):
                     if self.filter_name == 'Gabor':
-                        for l in range(self.filter_parameters.θ.size):
+                        for θ in self.filter_parameters.θ:
                             mx = -1
                             ind = 0
                             for m in range(self.filter_parameters.λ.size):
-                                par = (self.filter_parameters.θ[l], self.filter_parameters.λ[m])
+                                par = (θ, self.filter_parameters.λ[m])
                                 var = self.prototype_response_to_filters[par][direcciones[index[k]][0]][
                                     direcciones[index[k]][1]]
                                 if var > self.threshold_2 * self.maximum_reponse:
@@ -178,7 +175,7 @@ class Cosfire:
                                 tupla = CosfireCircularGaborTuple(ρ=ρ,
                                                                   ϕ=index[k] * (np.pi / 180.0),
                                                                   λ=self.filter_parameters.λ[ind],
-                                                                  θ=self.filter_parameters.θ[l])
+                                                                  θ=θ)
                                 operator.append(tupla)
                     elif self.filter_name == 'DoG':
                         for l in self.prototype_response_to_filters:
@@ -219,10 +216,11 @@ class Cosfire:
         for tupla in self._cosfire_tuples_invariant:
             if self.filter_name == 'Gabor':
                 gabor_key = GaborKey(θ=tupla.θ, λ=tupla.λ)
-                if not  gabor_key in unicos:
+                if not gabor_key in unicos:
                     l1 = np.array([gabor_key.θ])
                     l2 = np.array([gabor_key.λ])
-                    tt = self._compute_response_to_filters(self, inputImage) #TODO_: pay attention to this l1 and l2 that should go in as parameters
+                    tt = self._compute_response_to_filters(self,
+                                                           inputImage)  # TODO_: pay attention to this l1 and l2 that should go in as parameters
                     unicos[gabor_key] = tt[gabor_key]
             elif self.filter_name == 'DoG':
                 if not tupla[2] in unicos:
