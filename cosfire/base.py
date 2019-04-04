@@ -229,33 +229,33 @@ class Cosfire:
                                                     σ=tupla.σ * scale_value)
             self._cosfire_tuples_invariant.append(new_tupla)
         unicos = {}
-        for i in range(len(self._cosfire_tuples_invariant)):
+        for tupla in self._cosfire_tuples_invariant:
             if self.filter_name == 'Gabor':
-                new_tupla = (self._cosfire_tuples_invariant[i][3], self._cosfire_tuples_invariant[i][2])
-                if not new_tupla in unicos:
-                    l1 = np.array(1 * [new_tupla[0]])
-                    l2 = np.array(1 * [new_tupla[1]])
+                gabor_key = GaborKey(θ=tupla.θ, λ=tupla.λ)
+                if not  gabor_key in unicos:
+                    l1 = np.array([gabor_key.θ])
+                    l2 = np.array([gabor_key.λ])
                     tt = self._compute_response_to_filters(self, inputImage) #TODO_: pay attention to this l1 and l2 that should go in as parameters
-                    unicos[new_tupla] = tt[new_tupla]
+                    unicos[gabor_key] = tt[gabor_key]
             elif self.filter_name == 'DoG':
-                if not self._cosfire_tuples_invariant[i][2] in unicos:
-                    l1 = np.array(1 * [self._cosfire_tuples_invariant[i][2]])
+                if not tupla[2] in unicos:
+                    l1 = np.array(1 * [tupla[2]])
                     tt = compute_response_to_filters__DoG(inputImage, self.filter_parameters, l1)
-                    unicos[self._cosfire_tuples_invariant[i][2]] = tt[self._cosfire_tuples_invariant[i][2]]
+                    unicos[tupla[2]] = tt[tupla[2]]
         max = 0
-        for i in unicos:
-            t = unicos[i].shape
+        for tupla in unicos:
+            t = unicos[tupla].shape
             for j in range(t[0]):
                 for k in range(t[1]):
-                    sig = unicos[i][j][k]
+                    sig = unicos[tupla][j][k]
                     if sig > max:
-                        max = unicos[i][j][k]
-        for i in unicos:
-            t = unicos[i].shape
+                        max = unicos[tupla][j][k]
+        for tupla in unicos:
+            t = unicos[tupla].shape
             for j in range(t[0]):
                 for k in range(t[1]):
-                    if unicos[i][j][k] < max * self.threshold_1:
-                        unicos[i][j][k] = 0
+                    if unicos[tupla][j][k] < max * self.threshold_1:
+                        unicos[tupla][j][k] = 0
         unicos = self.blur_gaussian(unicos)  ##2.1.1 Hacemos Blur
         return unicos
 
@@ -307,22 +307,16 @@ class Cosfire:
     # Compute response
     def compute_response(self, conj, operator):
         rows, cols = conj[operator[0]].shape
-        resp = np.zeros((rows, cols))
+        resp = np.ones((rows, cols))
         ρ_maximum = max([tupla.ρ for tupla in operator])
         tuple_weight_σ = np.sqrt(-((ρ_maximum ** 2) / (2 * np.log(0.5))))
-        for i in range(rows):
-            for j in range(cols):
-                val = 1
-                suma = 0
-                for tupla in operator:
-                    aux = np.exp(-(tupla.ρ ** 2) / (2 * tuple_weight_σ ** 2))
-                    # if self.nameFilter=='DoG':
-                    #    aux=1
-                    suma += aux
-                    wi = aux
-                    val *= (conj[tupla][i][j] ** wi)
-                val = np.power(val, 1.0 / suma)
-                resp[i][j] = val
+
+        sum_of_scalar_power = 0
+        for tupla in operator:
+            scalar_power = np.exp(-(tupla.ρ ** 2) / (2 * tuple_weight_σ ** 2))
+            sum_of_scalar_power += scalar_power
+            resp *= np.float_power(conj[tupla], scalar_power)
+        resp = np.power(resp, 1.0 / sum_of_scalar_power)
         return resp
 
 
