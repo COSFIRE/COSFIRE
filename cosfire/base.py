@@ -227,7 +227,7 @@ def i_scale_cosfire__Circular_Gabor(self, image, operator, response_bank, **kwar
     maximum_output = np.zeros_like(image)
     for scale in self.scale_invariant:
         operatorEscala = [
-            CosfireCircularGaborTuple(ρ=tupla.ρ * scale, ϕ=tupla.ϕ, λ=tupla.λ * scale, θ=tupla.θ) for tupla in operator]
+            CosfireCircularGaborTuple(λ=tupla.λ * scale, θ=tupla.θ, ρ=tupla.ρ * scale, ϕ=tupla.ϕ) for tupla in operator]
         output = self.compute_response(response_bank, operatorEscala, **kwargs)
         maximum_output = np.maximum(output, maximum_output)
     return maximum_output
@@ -246,7 +246,7 @@ def i_scale_cosfire__Circular_DoG(self, image, operator, respBank, **kwargs):
 def i_rotation_cosfire__Circular_Gabor(self, image, operator, response_bank, **kwargs):
     maximum_output = np.zeros_like(image)
     for rotation in self.rotation_invariant:
-        operatorRotacion = [CosfireCircularGaborTuple(ρ=tupla.ρ, ϕ=tupla.ϕ + rotation, λ=tupla.λ, θ=tupla.θ + rotation)
+        operatorRotacion = [CosfireCircularGaborTuple(λ=tupla.λ, θ=tupla.θ + rotation, ρ=tupla.ρ, ϕ=tupla.ϕ + rotation)
                             for tupla in operator]
         output = self.i_scale_cosfire(image, operatorRotacion, response_bank, **kwargs)
         maximum_output = np.maximum(output, maximum_output)
@@ -265,7 +265,7 @@ def i_rotation_cosfire__Circular_DoG(self, image, operator, response_bank, **kwa
 def i_reflection_cosfire__Circular_Gabor(self, image, operator, response_bank, **kwargs):
     maximum_output = self.i_rotation_cosfire(image, operator, response_bank, **kwargs)
     if self.reflection_invariant == 1:
-        operatorI = [CosfireCircularGaborTuple(ρ=tupla.ρ, ϕ=π - tupla.ϕ, λ=tupla.λ, θ=π - tupla.θ)
+        operatorI = [CosfireCircularGaborTuple(λ=tupla.λ, θ=π - tupla.θ, ρ=tupla.ρ, ϕ=π - tupla.ϕ)
                      for tupla in operator]
         output = self.i_rotation_cosfire(image, operatorI, response_bank, **kwargs)
         maximum_output = np.maximum(output, maximum_output)
@@ -297,12 +297,14 @@ def compute_tuples__Circular_Gabor(self, inputImage, **kwargs):
     # Aqui llamar funcion que rellena parametros para invarianzas
     operator = self._cosfire_tuples[:]
     if self.reflection_invariant == 1:
-        operator += [CosfireCircularGaborTuple(ρ=tupla.ρ, ϕ=π - tupla.ϕ, λ=tupla.λ, θ=π - tupla.θ)
+        operator += [CosfireCircularGaborTuple(λ=tupla.λ, θ=π - tupla.θ, ρ=tupla.ρ, ϕ=π - tupla.ϕ)
                      for tupla in self._cosfire_tuples]
 
     for tupla, rotation, scale in itertools.product(operator, self.rotation_invariant, self.scale_invariant):
-        new_tupla = CosfireCircularGaborTuple(ρ=tupla.ρ * scale, ϕ=tupla.ϕ + rotation, λ=tupla.λ * scale,
-                                              θ=tupla.θ + rotation)
+        new_tupla = CosfireCircularGaborTuple(λ=tupla.λ * scale,
+                                              θ=tupla.θ + rotation,
+                                              ρ=tupla.ρ * scale,
+                                              ϕ=tupla.ϕ + rotation)
         self._cosfire_tuples_invariant.append(new_tupla)
     unicos = {}
     for tupla in self._cosfire_tuples_invariant:
@@ -323,7 +325,7 @@ def compute_tuples__Circular_DoG(self, inputImage, **kwargs):
     # Aqui llamar funcion que rellena parametros para invarianzas
     operator = self._cosfire_tuples[:]
     if self.reflection_invariant == 1:
-        operator += [CosfireCircularGaborTuple(ρ=tupla.ρ, ϕ=π - tupla.ϕ, λ=tupla.λ, θ=π - tupla.θ)
+        operator += [CosfireCircularGaborTuple(λ=tupla.λ, θ=π - tupla.θ, ρ=tupla.ρ, ϕ=π - tupla.ϕ)
                      for tupla in self._cosfire_tuples]
 
     for tupla, rotation, scale in itertools.product(operator, self.rotation_invariant, self.scale_invariant):
@@ -351,35 +353,34 @@ def get_cosfire_tuples__Circular_Gabor(self, bank, center_x, center_y, **kwargs)
             for θ, λ in itertools.product(self.filter_parameters.θ, self.filter_parameters.λ):
                 maximum_response_at_ρ_ϕ = self._prototype_responses[GaborKey(θ=θ, λ=λ)][center_x][center_y]
                 if maximum_response_at_ρ_ϕ > self._maximum_response * self.threshold_2:
-                    operator.append(CosfireCircularGaborTuple(ρ=0, ϕ=0, λ=λ, θ=θ))
+                    operator.append(CosfireCircularGaborTuple(λ=λ, θ=θ, ρ=0, ϕ=0))
         elif ρ > 0:
             maximum_responses_array = np.zeros_like(ϕ_array)
-            pixel_list = []
+            pixel_at_ρ_ϕ_list = []
             for k, ϕ in enumerate(ϕ_array):
                 pixel_at_ρ_ϕ = Pixel(row=int(center_x - np.floor(ρ * np.sin(ϕ))),
                                      column=int(center_y + np.floor(ρ * np.cos(ϕ))))
                 maximum_responses_array[k] = pixel_at_ρ_ϕ.maximum_response(bank=self._prototype_responses)
-                pixel_list.append(pixel_at_ρ_ϕ)
+                pixel_at_ρ_ϕ_list.append(pixel_at_ρ_ϕ)
             ss = 22  # int(360 / 16)
             if len(np.unique(maximum_responses_array)) == 1:
                 continue
             maximum_responses_array_augmented = np.zeros(maximum_responses_array.size + 1)
             maximum_responses_array_augmented[1:] = maximum_responses_array.copy()
-            response_peaks_index = peakutils.peak.indexes(maximum_responses_array_augmented, thres=0.2, min_dist=ss)
-            response_peaks_index = list(response_peaks_index - 1)
-            response_peaks_index = np.array(response_peaks_index)
+            response_peaks_index = - 1 + peakutils.peak.indexes(maximum_responses_array_augmented, thres=0.2,
+                                                                min_dist=ss)
             for peak_index in response_peaks_index:
                 for θ in self.filter_parameters.θ:
                     maximum_response = -1
                     for λ in self.filter_parameters.λ:
-                        response_at_bearing = self._prototype_responses[GaborKey(θ=θ, λ=λ)][
-                            pixel_list[peak_index].row][pixel_list[peak_index].column]
-                        if response_at_bearing > self.threshold_2 * self._maximum_response:
-                            if maximum_response < response_at_bearing:
-                                maximum_response = response_at_bearing
-                                λ_maximum = λ
+                        peak_response = self._prototype_responses[GaborKey(θ=θ, λ=λ)][
+                            pixel_at_ρ_ϕ_list[peak_index].row][pixel_at_ρ_ϕ_list[peak_index].column]
+                        if (peak_response > self.threshold_2 * self._maximum_response) and (
+                                peak_response > maximum_response):
+                            maximum_response = peak_response
+                            λ_maximum = λ
                     if maximum_response != -1:
-                        operator.append(CosfireCircularGaborTuple(ρ=ρ, ϕ=peak_index * (π / 180.0), λ=λ_maximum, θ=θ))
+                        operator.append(CosfireCircularGaborTuple(λ=λ_maximum, θ=θ, ρ=ρ, ϕ=peak_index * (π / 180.0)))
     return operator
 
 
