@@ -203,7 +203,7 @@ class TestCosfireCircularGabor(unittest.TestCase):
                                search_strategy='Circular',
                                center_x=100,
                                center_y=100,
-                               rho_list=[0, 5, 10, 20],
+                               rho_list=range(100),
                                t1=0.99,
                                t2=0.75,
                                t3=0.9,
@@ -211,11 +211,11 @@ class TestCosfireCircularGabor(unittest.TestCase):
                                                                  σ=5,
                                                                  θ=np.linspace(start=0,
                                                                                stop=π,
-                                                                               num=2,
+                                                                               num=180,
                                                                                endpoint=False),
                                                                  λ=np.linspace(start=0.01,
                                                                                stop=15,
-                                                                               num=2,
+                                                                               num=100,
                                                                                endpoint=False),
                                                                  γ=0.5,
                                                                  ψ=π,
@@ -229,5 +229,7 @@ class TestCosfireCircularGabor(unittest.TestCase):
         some_cosfire.prototype_image = self.pattern
         some_cosfire._prototype_responses = some_cosfire.compute_response_to_filters(some_cosfire.prototype_image)
         some_cosfire.suppress_responses_threshold_1()
+        self.assertAlmostEqual(some_cosfire._maximum_response, 5060.316, places=3)
         some_cosfire._cosfire_tuples = some_cosfire.get_cosfire_tuples()
-        self.assertAlmostEqual(some_cosfire._maximum_response, 4769.312, places=3)
+        expected =  [CosfireCircularGaborTuple(λ=0.7595000000000001, θ=0.8552113334772214, ρ=5, φ=2.6179938779914944), CosfireCircularGaborTuple(λ=0.7595000000000001, θ=0.8552113334772214, ρ=6, φ=2.478367537831948), CosfireCircularGaborTuple(λ=0.7595000000000001, θ=0.7155849933176751, ρ=6, φ=2.8797932657906435), CosfireCircularGaborTuple(λ=0.7595000000000001, θ=0.8552113334772214, ρ=7, φ=2.356194490192345), CosfireCircularGaborTuple(λ=0.7595000000000001, θ=0.7155849933176751, ρ=7, φ=2.91469985083053), CosfireCircularGaborTuple(λ=0.7595000000000001, θ=0.7155849933176751, ρ=8, φ=2.949606435870417)]
+        self.assertEqual(some_cosfire._cosfire_tuples, expected)
