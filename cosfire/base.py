@@ -365,21 +365,21 @@ def get_cosfire_tuples__Circular_Gabor(self, bank, center_x, center_y, **kwargs)
                 continue
             maximum_responses_array_augmented = np.zeros(maximum_responses_array.size + 1)
             maximum_responses_array_augmented[1:] = maximum_responses_array.copy()
-            index = peakutils.peak.indexes(maximum_responses_array_augmented, thres=0.2, min_dist=ss)
-            index = list(index - 1)
-            index = np.array(index)
-            for k in range(index.size):
+            response_peaks_index = peakutils.peak.indexes(maximum_responses_array_augmented, thres=0.2, min_dist=ss)
+            response_peaks_index = list(response_peaks_index - 1)
+            response_peaks_index = np.array(response_peaks_index)
+            for peak_index in response_peaks_index:
                 for θ in self.filter_parameters.θ:
                     maximum_response = -1
                     for λ in self.filter_parameters.λ:
                         response_at_bearing = self._prototype_responses[GaborKey(θ=θ, λ=λ)][
-                            pixel_list[index[k]][0]][pixel_list[index[k]][1]]
+                            pixel_list[peak_index].row][pixel_list[peak_index].column]
                         if response_at_bearing > self.threshold_2 * self._maximum_response:
                             if maximum_response < response_at_bearing:
                                 maximum_response = response_at_bearing
                                 λ_maximum = λ
                     if maximum_response != -1:
-                        operator.append(CosfireCircularGaborTuple(ρ=ρ, ϕ=index[k] * (π / 180.0), λ=λ_maximum, θ=θ))
+                        operator.append(CosfireCircularGaborTuple(ρ=ρ, ϕ=peak_index * (π / 180.0), λ=λ_maximum, θ=θ))
     return operator
 
 
