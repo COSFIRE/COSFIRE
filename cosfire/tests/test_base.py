@@ -229,7 +229,5 @@ class TestCosfireCircularGabor(unittest.TestCase):
         some_cosfire.prototype_image = self.pattern
         some_cosfire._prototype_responses = some_cosfire.compute_response_to_filters(some_cosfire.prototype_image)
         some_cosfire.suppress_responses_threshold_1()
-        some_cosfire._cosfire_tuples = some_cosfire.get_cosfire_tuples(some_cosfire._prototype_responses,
-                                                                       some_cosfire.center_x,
-                                                                       some_cosfire.center_y)
-        self.assertEqual(some_cosfire._maximum_response, 5137.624)
+        some_cosfire._cosfire_tuples = some_cosfire.get_cosfire_tuples()
+        self.assertAlmostEqual(some_cosfire._maximum_response, 4769.312, places=3)

@@ -12,6 +12,7 @@ import cv2
 import peakutils
 from typing import NamedTuple
 import itertools
+from math import floor, cos, sin
 
 π = np.pi
 
@@ -85,7 +86,7 @@ class Cosfire:
         self.filter_name = filter_name
         self.search_strategy = search_strategy
         self.center_x = center_x
-        self.center_y = center_y,
+        self.center_y = center_y
         self.ρ_list = [] if rho_list is None else rho_list
         self.η = eta  # TODO: unused!!!
         self.threshold_1 = t1
@@ -119,7 +120,7 @@ class Cosfire:
         self.prototype_image = X
         self._prototype_responses = self.compute_response_to_filters(self.prototype_image)  # 1.1
         self.suppress_responses_threshold_1()  # 1.2
-        self._cosfire_tuples = self.get_cosfire_tuples(self._prototype_responses, self.center_x, self.center_y)  # 1.3
+        self._cosfire_tuples = self.get_cosfire_tuples()  # 1.3
 
     # 2-Apply the COSFIRE filtler
     def transform(self, X, **kwargs):
@@ -145,8 +146,8 @@ class Cosfire:
         return
 
     # (1.3) Get descriptor set (Sf)
-    def get_cosfire_tuples(self, bank, center_x, center_y, **kwargs):
-        return self._get_cosfire_tuples(self, bank, center_x, center_y, **kwargs)
+    def get_cosfire_tuples(self, **kwargs):
+        return self._get_cosfire_tuples(self, **kwargs)
 
     # 2.1 For each tuple in the set Sf compute response
     def compute_tuples(self, inputImage, **kwargs):
@@ -161,8 +162,8 @@ class Cosfire:
         response_maps = {}
         for tupla, response in resp.items():
             rows, cols = response.shape
-            x = -tupla.ρ * np.cos(tupla.ϕ)
-            y = tupla.ρ * np.sin(tupla.ϕ)
+            x = -tupla.ρ * cos(tupla.ϕ)
+            y = tupla.ρ * sin(tupla.ϕ)
             M = np.float32([[1, 0, x],
                             [0, 1, y]])
             dst = cv2.warpAffine(response, M, (cols, rows), borderMode=cv2.BORDER_CONSTANT, borderValue=0)
@@ -345,60 +346,58 @@ def compute_tuples__Circular_DoG(self, inputImage, **kwargs):
     return unicos
 
 
-def get_cosfire_tuples__Circular_Gabor(self, bank, center_x, center_y, **kwargs):
+def get_cosfire_tuples__Circular_Gabor(self, **kwargs):
     operator = []
     ϕ_array = np.linspace(start=0, stop=2 * π, num=360, endpoint=False)
     for ρ in self.ρ_list:
         if ρ == 0:
             for θ, λ in itertools.product(self.filter_parameters.θ, self.filter_parameters.λ):
-                maximum_response_at_ρ_ϕ = self._prototype_responses[GaborKey(θ=θ, λ=λ)][center_x][center_y]
-                if maximum_response_at_ρ_ϕ > self._maximum_response * self.threshold_2:
+                response_at_ρ_ϕ = self._prototype_responses[GaborKey(θ=θ, λ=λ)][self.center_x][self.center_y]
+                if response_at_ρ_ϕ > self._maximum_response * self.threshold_2:
                     operator.append(CosfireCircularGaborTuple(λ=λ, θ=θ, ρ=0, ϕ=0))
         elif ρ > 0:
-            maximum_responses_array = np.zeros_like(ϕ_array)
-            pixel_at_ρ_ϕ_list = []
-            for k, ϕ in enumerate(ϕ_array):
-                pixel_at_ρ_ϕ = Pixel(row=int(center_x - np.floor(ρ * np.sin(ϕ))),
-                                     column=int(center_y + np.floor(ρ * np.cos(ϕ))))
-                maximum_responses_array[k] = pixel_at_ρ_ϕ.maximum_response(bank=self._prototype_responses)
-                pixel_at_ρ_ϕ_list.append(pixel_at_ρ_ϕ)
-            ss = 22  # int(360 / 16)
+            pixel_at_ρ_ϕ_list = [Pixel(row=floor(self.center_x - ρ * sin(ϕ)), column=floor(self.center_y + ρ * cos(ϕ)))
+                                 for ϕ in ϕ_array]
+            maximum_responses_array = np.array([pixel_at_ρ_ϕ.maximum_response(bank=self._prototype_responses)
+                                                for pixel_at_ρ_ϕ in pixel_at_ρ_ϕ_list])
             if len(np.unique(maximum_responses_array)) == 1:
                 continue
             maximum_responses_array_augmented = np.zeros(maximum_responses_array.size + 1)
+            maximum_responses_array_augmented[0] = maximum_responses_array[-1]
             maximum_responses_array_augmented[1:] = maximum_responses_array.copy()
             response_peaks_index = - 1 + peakutils.peak.indexes(maximum_responses_array_augmented, thres=0.2,
-                                                                min_dist=ss)
+                                                                min_dist=22)  # 22=360/16
             for peak_index in response_peaks_index:
                 for θ in self.filter_parameters.θ:
-                    maximum_response = -1
+                    maximum_response = 0
                     for λ in self.filter_parameters.λ:
-                        peak_response = self._prototype_responses[GaborKey(θ=θ, λ=λ)][
-                            pixel_at_ρ_ϕ_list[peak_index].row][pixel_at_ρ_ϕ_list[peak_index].column]
-                        if (peak_response > self.threshold_2 * self._maximum_response) and (
-                                peak_response > maximum_response):
-                            maximum_response = peak_response
+                        peak_pixel = pixel_at_ρ_ϕ_list[peak_index]
+                        response_at_peak = self._prototype_responses[GaborKey(θ=θ, λ=λ)][peak_pixel]
+                        if (response_at_peak > self.threshold_2 * self._maximum_response) and (
+                                response_at_peak > maximum_response):
+                            maximum_response = response_at_peak
                             λ_maximum = λ
-                    if maximum_response != -1:
+                    if maximum_response > 0:
                         operator.append(CosfireCircularGaborTuple(λ=λ_maximum, θ=θ, ρ=ρ, ϕ=peak_index * (π / 180.0)))
+
     return operator
 
 
-def get_cosfire_tuples__Circular_DoG(self, bank, center_x, center_y, **kwargs):
+def get_cosfire_tuples__Circular_DoG(self, **kwargs):
     operator = []
     ϕ_array = np.linspace(start=0, stop=2 * π, num=360, endpoint=False)
     for ρ in self.ρ_list:
         if ρ == 0:
             for σ in self.filter_parameters.σ:
-                response_at_center = self._prototype_responses[σ][center_x][center_y]
+                response_at_center = self._prototype_responses[σ][self.center_x][self.center_y]
                 if response_at_center > self._maximum_response * self.threshold_2:
                     operator.append(CosfireCircularDoGTuple(ρ=0, ϕ=0, σ=σ))
         elif ρ > 0:
             listMax = np.zeros(360)
             direcciones = []
             for k, ϕ in enumerate(ϕ_array):
-                yi = int(center_y + np.floor(ρ * np.cos(ϕ)))
-                xi = int(center_x - np.floor(ρ * np.sin(ϕ)))
+                yi = floor(self.center_y + ρ * cos(ϕ))
+                xi = floor(self.center_x - ρ * sin(ϕ))
                 response_at_center = 0
                 rows, cols = self.prototype_image.shape
                 if xi >= 0 and yi >= 0 and xi < rows and yi < cols:
@@ -407,12 +406,11 @@ def get_cosfire_tuples__Circular_DoG(self, bank, center_x, center_y, **kwargs):
                             response_at_center = response[xi][yi]
                 listMax[k] = response_at_center
                 direcciones.append((xi, yi))
-            ss = int(360 / 16)
             if len(np.unique(listMax)) == 1:
                 continue
             listMax1 = np.zeros(listMax.size + 1)
             listMax1[1:] = listMax.copy()
-            index = indexes(listMax1, thres=0.2, min_dist=ss)
+            index = peakutils.peak.indexes(listMax1, thres=0.2, min_dist=22)  # 22=360/16
             index = list(index - 1)
             index = np.array(index)
             for k in range(index.size):
