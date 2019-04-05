@@ -9,6 +9,7 @@ from skimage import data
 from cosfire.base import (Cosfire,
                           CosfireCircularGaborTuple,
                           GaborParameters,
+                          π,
                           )
 
 from cosfire.function_filters import (FunctionFilter,
@@ -27,10 +28,10 @@ preset_1 = dict(filter_name="Gabor",
                 t3=0.9,
                 filter_parameters=GaborParameters(ksize=(10, 10),
                                                   σ=5,
-                                                  θ=np.array([0, np.pi / 2]),
+                                                  θ=np.array([0, π / 2]),
                                                   λ=np.array([12]),
                                                   γ=0.5,
-                                                  ψ=np.pi,
+                                                  ψ=π,
                                                   ktype=cv2.CV_32F),
                 sigma0=0.67,
                 alpha=0.04,
@@ -43,16 +44,16 @@ preset_2 = dict(filter_name="Gabor",
                 center_coordinate_x=166,
                 center_coordinate_y=96,
                 rho_list=[0, 12],
-                eta=np.pi / 8,
+                eta=π / 8,
                 t1=0.99,
                 t2=0.75,
                 t3=0.9,
                 filter_parameters=[(10, 10),
                                    5,
-                                   np.array([0, np.pi / 2]),
+                                   np.array([0, π / 2]),
                                    np.array([12]),
                                    0.5,
-                                   np.pi],
+                                   π],
                 sigma0=0.67,
                 alpha=0.04,
                 reflection_invariant=True,
@@ -64,16 +65,16 @@ preset_3 = dict(filter_name="Gabor",
                 center_coordinate_x=24,
                 center_coordinate_y=28,
                 rho_list=[0, 2, 4, 7, 10, 13, 16, 20, 25],
-                eta=np.pi / 8,
+                eta=π / 8,
                 t1=0.1,
                 t2=0.75,
                 t3=0.99,
                 filter_parameters=[(10, 10),
                                    0.8,
-                                   np.array([(i * np.pi) / 8.0 for i in range(16)]),
+                                   np.array([(i * π) / 8.0 for i in range(16)]),
                                    np.array([4]),
                                    0.5,
-                                   np.pi / 2],
+                                   π / 2],
                 sigma0=0.67,
                 alpha=0.04,
                 reflection_invariant=False,
@@ -85,16 +86,16 @@ preset_6 = dict(filter_name="Gabor",
                 center_coordinate_x=17,
                 center_coordinate_y=17,
                 rho_list=[0, 3, 8],
-                eta=np.pi / 8,
+                eta=π / 8,
                 t1=0.05,
                 t2=0.75,
                 t3=0.3,
-                filter_parameters=[np.array([(i * np.pi) / 8.0 for i in range(16)]),
+                filter_parameters=[np.array([(i * π) / 8.0 for i in range(16)]),
                                    np.array([2 * np.sqrt(2)]),
                                    (5, 5),
                                    0.8,
                                    0.5,
-                                   np.pi / 2],
+                                   π / 2],
                 sigma0=0.83,
                 alpha=0.1,
                 reflection_invariant=False,
@@ -143,9 +144,9 @@ class TestCosfire(unittest.TestCase):
                                    [3, 2, 2, 2, 3],
                                    [3, 3, 3, 3, 3]], dtype=np.float32)
         tupla_collection = [CosfireCircularGaborTuple(ρ=1, ϕ=0, λ=0.1, θ=0),
-                            CosfireCircularGaborTuple(ρ=1, ϕ=np.pi * 0.5, λ=0.1, θ=0),
-                            CosfireCircularGaborTuple(ρ=1, ϕ=np.pi, λ=0.1, θ=0),
-                            CosfireCircularGaborTuple(ρ=1, ϕ=np.pi * 1.5, λ=0.1, θ=0),
+                            CosfireCircularGaborTuple(ρ=1, ϕ=π * 0.5, λ=0.1, θ=0),
+                            CosfireCircularGaborTuple(ρ=1, ϕ=π, λ=0.1, θ=0),
+                            CosfireCircularGaborTuple(ρ=1, ϕ=π * 1.5, λ=0.1, θ=0),
                             ]
         response_collection = {tupla: specific_image for tupla in tupla_collection}
         cosfire_filter = Cosfire(**preset_1)
@@ -157,36 +158,78 @@ class TestCosfire(unittest.TestCase):
                                                                        [2, 1, 2, 3, 0],
                                                                        [2, 2, 2, 3, 0],
                                                                        [3, 3, 3, 3, 0]], dtype=np.float32),
-            CosfireCircularGaborTuple(ρ=1, ϕ=np.pi * 0.5, λ=0.1, θ=0): np.array([[0., 0., 0., 0., 0.],
-                                                                                 [3., 3., 3., 3., 3.],
-                                                                                 [3., 2., 2., 2., 3.],
-                                                                                 [3., 2., 1., 2., 3.],
-                                                                                 [3., 2., 2., 2., 3.]],
-                                                                                dtype=np.float32),
-            CosfireCircularGaborTuple(ρ=1, ϕ=np.pi, λ=0.1, θ=0): np.array([[0., 3., 3., 3., 3.],
-                                                                           [0., 3., 2., 2., 2.],
-                                                                           [0., 3., 2., 1., 2.],
-                                                                           [0., 3., 2., 2., 2.],
-                                                                           [0., 3., 3., 3., 3.]], dtype=np.float32),
-            CosfireCircularGaborTuple(ρ=1, ϕ=np.pi * 1.5, λ=0.1, θ=0): np.array([[3., 2., 2., 2., 3.],
-                                                                                 [3., 2., 1., 2., 3.],
-                                                                                 [3., 2., 2., 2., 3.],
-                                                                                 [3., 3., 3., 3., 3.],
-                                                                                 [0., 0., 0., 0., 0.]],
-                                                                                dtype=np.float32), }
+            CosfireCircularGaborTuple(ρ=1, ϕ=π * 0.5, λ=0.1, θ=0): np.array([[0., 0., 0., 0., 0.],
+                                                                             [3., 3., 3., 3., 3.],
+                                                                             [3., 2., 2., 2., 3.],
+                                                                             [3., 2., 1., 2., 3.],
+                                                                             [3., 2., 2., 2., 3.]],
+                                                                            dtype=np.float32),
+            CosfireCircularGaborTuple(ρ=1, ϕ=π, λ=0.1, θ=0): np.array([[0., 3., 3., 3., 3.],
+                                                                       [0., 3., 2., 2., 2.],
+                                                                       [0., 3., 2., 1., 2.],
+                                                                       [0., 3., 2., 2., 2.],
+                                                                       [0., 3., 3., 3., 3.]], dtype=np.float32),
+            CosfireCircularGaborTuple(ρ=1, ϕ=π * 1.5, λ=0.1, θ=0): np.array([[3., 2., 2., 2., 3.],
+                                                                             [3., 2., 1., 2., 3.],
+                                                                             [3., 2., 2., 2., 3.],
+                                                                             [3., 3., 3., 3., 3.],
+                                                                             [0., 0., 0., 0., 0.]],
+                                                                            dtype=np.float32), }
 
-        assert_almost_equal(result_collection[CosfireCircularGaborTuple(ρ=1, ϕ=np.pi, λ=0.1, θ=0)],
-                            expected_collection[CosfireCircularGaborTuple(ρ=1, ϕ=np.pi, λ=0.1, θ=0)])
+        assert_almost_equal(result_collection[CosfireCircularGaborTuple(ρ=1, ϕ=π, λ=0.1, θ=0)],
+                            expected_collection[CosfireCircularGaborTuple(ρ=1, ϕ=π, λ=0.1, θ=0)])
 
         assert_almost_equal(result_collection[CosfireCircularGaborTuple(ρ=1, ϕ=0, λ=0.1, θ=0)],
                             expected_collection[CosfireCircularGaborTuple(ρ=1, ϕ=0, λ=0.1, θ=0)])
 
+        assert_almost_equal(result_collection[CosfireCircularGaborTuple(ρ=1, ϕ=π * 0.5, λ=0.1, θ=0)],
+                            expected_collection[CosfireCircularGaborTuple(ρ=1, ϕ=π * 0.5, λ=0.1, θ=0)])
 
-        assert_almost_equal(result_collection[CosfireCircularGaborTuple(ρ=1, ϕ=np.pi * 0.5, λ=0.1, θ=0)],
-                            expected_collection[CosfireCircularGaborTuple(ρ=1, ϕ=np.pi * 0.5, λ=0.1, θ=0)])
-
-        assert_almost_equal(result_collection[CosfireCircularGaborTuple(ρ=1, ϕ=np.pi * 1.5, λ=0.1, θ=0)],
-                            expected_collection[CosfireCircularGaborTuple(ρ=1, ϕ=np.pi * 1.5, λ=0.1, θ=0)])
+        assert_almost_equal(result_collection[CosfireCircularGaborTuple(ρ=1, ϕ=π * 1.5, λ=0.1, θ=0)],
+                            expected_collection[CosfireCircularGaborTuple(ρ=1, ϕ=π * 1.5, λ=0.1, θ=0)])
 
         # for key, result in result_collection.items():
         #     assert_almost_equal(result, expected_collection[key])
+
+
+class TestCosfireCircularGabor(unittest.TestCase):
+    def setUp(self):
+        self.pattern = np.zeros((256, 256))
+        cv2.rectangle(img=self.pattern, pt1=(50, 100), pt2=(100, 106), color=255, thickness=-1)
+        cv2.rectangle(img=self.pattern, pt1=(100, 100), pt2=(97, 50), color=255, thickness=-1)
+
+    def test_cosfire_process(self):
+        some_cosfire = Cosfire(filter_name='Gabor',
+                               search_strategy='Circular',
+                               center_x=100,
+                               center_y=100,
+                               rho_list=[0, 5, 10, 20],
+                               t1=0.99,
+                               t2=0.75,
+                               t3=0.9,
+                               filter_parameters=GaborParameters(ksize=(10, 10),
+                                                                 σ=5,
+                                                                 θ=np.linspace(start=0,
+                                                                               stop=π,
+                                                                               num=2,
+                                                                               endpoint=False),
+                                                                 λ=np.linspace(start=0.01,
+                                                                               stop=15,
+                                                                               num=2,
+                                                                               endpoint=False),
+                                                                 γ=0.5,
+                                                                 ψ=π,
+                                                                 ktype=cv2.CV_32F),
+                               sigma0=0.67,
+                               alpha=0.04,
+                               reflection_invariant=0,
+                               scale_invariant=[1],
+                               rotation_invariant=[0]
+                               )
+        some_cosfire.prototype_image = self.pattern
+        some_cosfire._prototype_responses = some_cosfire.compute_response_to_filters(some_cosfire.prototype_image)
+        some_cosfire.suppress_responses_threshold_1()
+        some_cosfire._cosfire_tuples = some_cosfire.get_cosfire_tuples(some_cosfire._prototype_responses,
+                                                                       some_cosfire.center_x,
+                                                                       some_cosfire.center_y)
+        self.assertEqual(some_cosfire._maximum_response, 5137.624)
