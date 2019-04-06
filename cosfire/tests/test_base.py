@@ -12,8 +12,6 @@ from cosfire.base import (Cosfire,
                           π,
                           )
 
-from cosfire.function_filters import (FunctionFilter,
-                                      )
 
 logging.basicConfig(level=logging.NOTSET)
 logger = logging.getLogger(__name__)
@@ -102,23 +100,6 @@ preset_6 = dict(filter_name="Gabor",
                 scale_invariant=[1],
                 rotation_invariant=[0]
                 )
-
-
-class TestFunctionFilter(unittest.TestCase):
-    def setUp(self):
-        self.image = data.coins()
-        self.gabor_filter = FunctionFilter(gabor, 1, 0)
-        self.gaussian_filter = FunctionFilter(gaussian, 1)
-
-    def test_function_filter__gabor_fit(self):
-        some_filter = self.gabor_filter
-        self.assertTrue(some_filter.fit() is some_filter)
-
-    def test_function_filter__gabor_transform(self):
-        some_image = self.image
-        some_filter = self.gabor_filter
-        filter_response = some_filter.transform(some_image)
-        self.assertEqual(filter_response[0].shape, some_image.shape)
 
 
 class TestCosfire(unittest.TestCase):
@@ -230,7 +211,7 @@ class TestCosfireCircularGabor(unittest.TestCase):
         some_cosfire._prototype_bank = some_cosfire.compute_bank_of_responses(some_cosfire.prototype_image)
         some_cosfire.threshold_prototype_bank_of_responses(some_cosfire.threshold_1)
         # self.assertAlmostEqual(some_cosfire._maximum_response, 5060.316, places=3)
-        some_cosfire._Sf = some_cosfire.get_Sf()
+        some_cosfire._Sf = some_cosfire.fit_Sf()
         expected = [CosfireCircularGaborTuple(λ=7.5, θ=0.0, ρ=10, φ=1.3089969389957472),
                     CosfireCircularGaborTuple(λ=7.5, θ=0.0, ρ=10, φ=2.0420352248333655),
                     CosfireCircularGaborTuple(λ=7.5, θ=1.5707963267948966, ρ=10, φ=2.9845130209103035),
