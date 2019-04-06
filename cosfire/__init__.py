@@ -1,6 +1,6 @@
-from .template import (TemplateEstimator, TemplateClassifier,
-                       TemplateTransformer)
-from . import template
+from .base import (Cosfire,
+                   )
+from . import base
 
 __all__ = ['TemplateEstimator', 'TemplateClassifier',
            'TemplateTransformer', 'template']
