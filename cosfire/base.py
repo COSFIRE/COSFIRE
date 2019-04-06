@@ -23,7 +23,7 @@ class Pixel(NamedTuple):
 
     def is_inside(self, image):
         rows, cols = image.shape
-        is_pixel_inside_image = self.row >= 0 and self.column >= 0 and self.row < rows and self.column < cols
+        is_pixel_inside_image = (0 <= self.row < rows ) and (0 <= self.column < cols)
         return is_pixel_inside_image
 
     def maximum_response(self, bank):
@@ -33,7 +33,7 @@ class Pixel(NamedTuple):
             break  # I just want one image to check the size
 
         if self.is_inside(some_response_map):
-            maximum_response = max([response[self.row][self.column] for _, response in bank.items()])
+            maximum_response = max([response[self] for _, response in bank.items()])
         return maximum_response
 
 
