@@ -16,7 +16,7 @@ from cosfire.base import (Cosfire,
 logging.basicConfig(level=logging.NOTSET)
 logger = logging.getLogger(__name__)
 
-preset_1 = dict(filter_name="Gabor",
+preset_1 = dict(strategy_name="Circular Gabor",
                 center_x=166,
                 center_y=96,
                 rho_list=[0, 12],
@@ -38,7 +38,7 @@ preset_1 = dict(filter_name="Gabor",
                 rotation_invariant=[0]
                 )
 
-preset_2 = dict(filter_name="Gabor",
+preset_2 = dict(strategy_name="Circular Gabor",
                 center_coordinate_x=166,
                 center_coordinate_y=96,
                 rho_list=[0, 12],
@@ -59,7 +59,7 @@ preset_2 = dict(filter_name="Gabor",
                 rotation_invariant=[0]
                 )
 
-preset_3 = dict(filter_name="Gabor",
+preset_3 = dict(strategy_name="Circular Gabor",
                 center_coordinate_x=24,
                 center_coordinate_y=28,
                 rho_list=[0, 2, 4, 7, 10, 13, 16, 20, 25],
@@ -80,7 +80,7 @@ preset_3 = dict(filter_name="Gabor",
                 rotation_invariant=[0]
                 )
 
-preset_6 = dict(filter_name="Gabor",
+preset_6 = dict(strategy_name="Circular Gabor",
                 center_coordinate_x=17,
                 center_coordinate_y=17,
                 rho_list=[0, 3, 8],
@@ -180,27 +180,17 @@ class TestCosfireCircularGabor(unittest.TestCase):
         cv2.rectangle(img=self.pattern, pt1=(100, 100), pt2=(97, 50), color=255, thickness=-1)
 
     def test_cosfire_process(self):
-        some_cosfire = Cosfire(filter_name='Gabor',
-                               search_strategy='Circular',
+        some_cosfire = Cosfire(strategy_name='Circular Gabor',
                                center_x=100,
                                center_y=100,
                                rho_list=range(0, 100, 10),
                                t1=0.99,
                                t2=0.75,
                                t3=0.9,
-                               filter_parameters=GaborParameters(ksize=(10, 10),
-                                                                 σ=5,
-                                                                 θ=np.linspace(start=0,
-                                                                               stop=π,
-                                                                               num=30,
-                                                                               endpoint=False),
-                                                                 λ=np.linspace(start=7,
-                                                                               stop=8,
-                                                                               num=10,
-                                                                               endpoint=False),
-                                                                 γ=0.5,
-                                                                 ψ=π,
-                                                                 ktype=cv2.CV_32F),
+                               filter_parameters=GaborParameters(ksize=(10, 10), σ=5,
+                                                                 θ=np.linspace(start=0, stop=π, num=30, endpoint=False),
+                                                                 λ=np.linspace(start=7, stop=8, num=10, endpoint=False),
+                                                                 γ=0.5, ψ=π, ktype=cv2.CV_32F),
                                sigma0=0.67,
                                alpha=0.04,
                                reflection_invariant=0,

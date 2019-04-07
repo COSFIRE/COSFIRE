@@ -72,8 +72,7 @@ class CosfireCircularDoGTuple(NamedTuple):
 
 class Cosfire:
     def __init__(self,
-                 filter_name='Gabor',
-                 search_strategy='Circular',
+                 strategy_name='Circular Gabor',
                  center_x=0,
                  center_y=0,
                  rho_list=None,
@@ -88,8 +87,7 @@ class Cosfire:
                  rotation_invariant=None,
                  scale_invariant=None,
                  ddepth=cv2.CV_32F):
-        self.filter_name = filter_name
-        self.search_strategy = search_strategy
+        self.strategy_name = strategy_name
         self.center_x = center_x
         self.center_y = center_y
         self.ρ_list = [] if rho_list is None else rho_list
@@ -105,14 +103,14 @@ class Cosfire:
         self.rotation_invariant = [] if rotation_invariant is None else rotation_invariant
         self.ddepth = ddepth
 
-        strategy_key = (search_strategy, filter_name)
-        self._compute_bank_of_responses = _compute_bank_of_responses_dictionary[strategy_key]
-        self._i_scale_cosfire = _i_scale_cosfire_dictionary[strategy_key]
-        self._i_rotation_cosfire = _i_rotation_cosfire_dictionary[strategy_key]
-        self._i_reflection_cosfire = _i_reflection_cosfire_dictionary[strategy_key]
-        self._blur_gaussian = _blur_gaussian_dictionary[strategy_key]
-        self._compute_tuples = _compute_tuples_dictionary[strategy_key]
-        self._fit_Sf = _fit_Sf_dictionary[strategy_key]
+        strategies = strategies_dictionary[self.strategy_name]
+        self._compute_bank_of_responses = strategies['compute_bank_of_responses']
+        self._i_scale_cosfire = strategies['i_scale_cosfire']
+        self._i_rotation_cosfire = strategies['i_rotation_cosfire']
+        self._i_reflection_cosfire = strategies['i_reflection_cosfire']
+        self._blur_gaussian = strategies['blur_gaussian']
+        self._compute_tuples = strategies['compute_tuples']
+        self._fit_Sf = strategies['fit_Sf']
 
         self._responses_to_image = {}
         self._Sf = []  # Struct of filter COSFIRE (S_f)
@@ -208,7 +206,7 @@ class Cosfire:
         return resp
 
 
-def _compute_bank_of_responses__Circular_Gabor(self, image, **kwargs):
+def _Circular_Gabor__compute_bank_of_responses(self, image, **kwargs):
     ksize, σ, θ_array, λ_array, γ, ψ, ktype = self.filter_parameters
     if 'θ_array' in kwargs:
         θ_array = kwargs['θ_array']
@@ -224,7 +222,7 @@ def _compute_bank_of_responses__Circular_Gabor(self, image, **kwargs):
     return response_dict
 
 
-def _compute_bank_of_responses__Circular_DoG(self, image, **kwargs):
+def _Circular_DoG__compute_bank_of_responses(self, image, **kwargs):
     response = {}
     for σ in self.filter_parameters.σ:
         g1 = cv2.GaussianBlur(image, (3, 3), σ)
@@ -234,7 +232,7 @@ def _compute_bank_of_responses__Circular_DoG(self, image, **kwargs):
     return response
 
 
-def _i_scale_cosfire__Circular_Gabor(self, image, operator, response_bank, **kwargs):
+def _Circular_Gabor__i_scale_cosfire(self, image, operator, response_bank, **kwargs):
     maximum_output = np.zeros_like(image)
     for scale in self.scale_invariant:
         operatorEscala = [
@@ -244,7 +242,7 @@ def _i_scale_cosfire__Circular_Gabor(self, image, operator, response_bank, **kwa
     return maximum_output
 
 
-def _i_scale_cosfire__Circular_DoG(self, image, operator, respBank, **kwargs):
+def _Circular_DoG__i_scale_cosfire(self, image, operator, respBank, **kwargs):
     maximum_output = np.zeros_like(image)
     for scale in self.scale_invariant:
         operatorEscala = [CosfireCircularDoGTuple(ρ=tupla.ρ * scale, ϕ=tupla.ϕ, σ=tupla.σ * scale)
@@ -254,7 +252,7 @@ def _i_scale_cosfire__Circular_DoG(self, image, operator, respBank, **kwargs):
     return maximum_output
 
 
-def _i_rotation_cosfire__Circular_Gabor(self, image, operator, response_bank, **kwargs):
+def _Circular_Gabor__i_rotation_cosfire(self, image, operator, response_bank, **kwargs):
     maximum_output = np.zeros_like(image)
     for rotation in self.rotation_invariant:
         operatorRotacion = [CosfireCircularGaborTuple(λ=tupla.λ, θ=tupla.θ + rotation, ρ=tupla.ρ, ϕ=tupla.ϕ + rotation)
@@ -264,7 +262,7 @@ def _i_rotation_cosfire__Circular_Gabor(self, image, operator, response_bank, **
     return maximum_output
 
 
-def _i_rotation_cosfire__Circular_DoG(self, image, operator, response_bank, **kwargs):
+def _Circular_DoG__i_rotation_cosfire(self, image, operator, response_bank, **kwargs):
     maximum_output = np.zeros_like(image)
     for rotation in self.rotation_invariant:
         operatorRotacion = [CosfireCircularDoGTuple(ρ=tupla.ρ, ϕ=tupla.ϕ + rotation, σ=tupla.σ) for tupla in operator]
@@ -273,7 +271,7 @@ def _i_rotation_cosfire__Circular_DoG(self, image, operator, response_bank, **kw
     return maximum_output
 
 
-def _i_reflection_cosfire__Circular_Gabor(self, image, operator, response_bank, **kwargs):
+def _Circular_Gabor__i_reflection_cosfire(self, image, operator, response_bank, **kwargs):
     maximum_output = self.i_rotation_cosfire(image, operator, response_bank, **kwargs)
     if self.reflection_invariant == 1:
         operatorI = [CosfireCircularGaborTuple(λ=tupla.λ, θ=π - tupla.θ, ρ=tupla.ρ, ϕ=π - tupla.ϕ)
@@ -283,20 +281,19 @@ def _i_reflection_cosfire__Circular_Gabor(self, image, operator, response_bank, 
     return maximum_output
 
 
-def _i_reflection_cosfire__Circular_DoG(self, image, operator, response_bank, **kwargs):  # pure imagination
+def _Circular_DoG__i_reflection_cosfire(self, image, operator, response_bank, **kwargs):  # pure imagination
     return self.i_rotation_cosfire(image, operator, response_bank, **kwargs)
 
 
-def _blur_gaussian__Circular_Gabor(self, bank, **kwargs):
+def _Circular_Gabor__blur_gaussian(self, bank, **kwargs):
     dic = {}
     for tupla in self._Sf_invariant:
         σ = self.alpha * tupla.ρ + self.σ0
-        if not tupla in dic:
-            dic[tupla] = cv2.GaussianBlur(bank[(tupla.θ, tupla.λ)], (9, 9), σ, σ)
+        dic[tupla] = cv2.GaussianBlur(bank[(tupla.θ, tupla.λ)], (9, 9), σ, σ)
     return dic
 
 
-def _blur_gaussian__Circular_DoG(self, bank, **kwargs):
+def _Circular_DoG__blur_gaussian(self, bank, **kwargs):
     dic = {}
     for tupla in self._Sf_invariant:
         σ = self.alpha * tupla.ρ + self.σ0
@@ -304,12 +301,14 @@ def _blur_gaussian__Circular_DoG(self, bank, **kwargs):
     return dic
 
 
-def _compute_tuples__Circular_Gabor(self, inputImage, **kwargs):
-    # Aqui llamar funcion que rellena parametros para invarianzas
+def _Circular_Gabor_compute_tuples(self, inputImage, **kwargs):
+    # Daniel: Aqui llamar funcion que rellena parametros para invarianzas
     operator = self._Sf[:]
     if self.reflection_invariant == 1:
-        operator += [CosfireCircularGaborTuple(λ=tupla.λ, θ=π - tupla.θ, ρ=tupla.ρ, ϕ=π - tupla.ϕ)
-                     for tupla in self._Sf]
+        operator += [CosfireCircularGaborTuple(λ=tupla.λ,
+                                               θ=π - tupla.θ,
+                                               ρ=tupla.ρ,
+                                               ϕ=π - tupla.ϕ) for tupla in self._Sf]
 
     for tupla, rotation, scale in itertools.product(operator, self.rotation_invariant, self.scale_invariant):
         new_tupla = CosfireCircularGaborTuple(λ=tupla.λ * scale,
@@ -332,7 +331,7 @@ def _compute_tuples__Circular_Gabor(self, inputImage, **kwargs):
     return unicos
 
 
-def _compute_tuples__Circular_DoG(self, inputImage, **kwargs):
+def _Circular_DoG__compute_tuples(self, inputImage, **kwargs):
     # Aqui llamar funcion que rellena parametros para invarianzas
     operator = self._Sf[:]
     if self.reflection_invariant == 1:
@@ -356,7 +355,7 @@ def _compute_tuples__Circular_DoG(self, inputImage, **kwargs):
     return unicos
 
 
-def _fit_Sf__Circular_Gabor(self, **kwargs):
+def _Circular_Gabor__fit_Sf(self, **kwargs):
     operator = []
     ϕ_array = np.linspace(start=0, stop=2 * π, num=360, endpoint=False)
     for ρ in self.ρ_list:
@@ -393,7 +392,7 @@ def _fit_Sf__Circular_Gabor(self, **kwargs):
     return operator
 
 
-def _fit_Sf__Circular_DoG(self, **kwargs):
+def _Circular_DoG__fit_Sf(self, **kwargs):
     operator = []
     ϕ_array = np.linspace(start=0, stop=2 * π, num=360, endpoint=False)
     for ρ in self.ρ_list:
@@ -431,37 +430,23 @@ def _fit_Sf__Circular_DoG(self, **kwargs):
     return operator
 
 
-_fit_Sf_dictionary = {
-    ('Circular', 'Gabor'): _fit_Sf__Circular_Gabor,
-    ('Circular', 'DoG'): _fit_Sf__Circular_DoG
-}
-
-_compute_tuples_dictionary = {
-    ('Circular', 'Gabor'): _compute_tuples__Circular_Gabor,
-    ('Circular', 'DoG'): _compute_tuples__Circular_DoG
-}
-
-_blur_gaussian_dictionary = {
-    ('Circular', 'Gabor'): _blur_gaussian__Circular_Gabor,
-    ('Circular', 'DoG'): _blur_gaussian__Circular_DoG
-}
-
-_compute_bank_of_responses_dictionary = {
-    ('Circular', 'Gabor'): _compute_bank_of_responses__Circular_Gabor,
-    ('Circular', 'DoG'): _compute_bank_of_responses__Circular_DoG
-}
-
-_i_scale_cosfire_dictionary = {
-    ('Circular', 'Gabor'): _i_scale_cosfire__Circular_Gabor,
-    ('Circular', 'DoG'): _i_scale_cosfire__Circular_DoG
-}
-
-_i_rotation_cosfire_dictionary = {
-    ('Circular', 'Gabor'): _i_rotation_cosfire__Circular_Gabor,
-    ('Circular', 'DoG'): _i_rotation_cosfire__Circular_DoG
-}
-
-_i_reflection_cosfire_dictionary = {
-    ('Circular', 'Gabor'): _i_reflection_cosfire__Circular_Gabor,
-    ('Circular', 'DoG'): _i_reflection_cosfire__Circular_DoG
+strategies_dictionary = {
+    'Circular Gabor': {
+        'fit_Sf': _Circular_Gabor__fit_Sf,
+        'compute_tuples': _Circular_Gabor_compute_tuples,
+        'blur_gaussian': _Circular_Gabor__blur_gaussian,
+        'compute_bank_of_responses': _Circular_Gabor__compute_bank_of_responses,
+        'i_scale_cosfire': _Circular_Gabor__i_scale_cosfire,
+        'i_rotation_cosfire': _Circular_Gabor__i_rotation_cosfire,
+        'i_reflection_cosfire': _Circular_Gabor__i_reflection_cosfire,
+    },
+    'Circular DoG': {
+        'fit_Sf': _Circular_DoG__fit_Sf,
+        'compute_tuples': _Circular_DoG__compute_tuples,
+        'blur_gaussian': _Circular_DoG__blur_gaussian,
+        'compute_bank_of_responses': _Circular_DoG__compute_bank_of_responses,
+        'i_scale_cosfire': _Circular_DoG__i_scale_cosfire,
+        'i_rotation_cosfire': _Circular_DoG__i_rotation_cosfire,
+        'i_reflection_cosfire': _Circular_DoG__i_reflection_cosfire,
+    },
 }
