@@ -132,6 +132,7 @@ class Cosfire:
     # 2-Apply the COSFIRE filter
     def transform(self, X, **kwargs):
         input_image = X
+        self._Sf_invariant = []
         input_image_bank_of_responses = self.compute_tuples(input_image)  # 2.1
         input_image_bank_of_responses = self.shift_responses(input_image_bank_of_responses)  # 2.2
         output_image = self.i_reflection_cosfire(input_image, self._Sf, input_image_bank_of_responses)  # 2.3
@@ -301,7 +302,7 @@ def _Circular_DoG__blur_gaussian(self, bank, **kwargs):
     return dic
 
 
-def _Circular_Gabor_compute_tuples(self, inputImage, **kwargs):
+def _Circular_Gabor__compute_tuples(self, inputImage, **kwargs):
     # Daniel: Aqui llamar funcion que rellena parametros para invarianzas
     operator = self._Sf[:]
     if self.reflection_invariant == 1:
@@ -311,11 +312,10 @@ def _Circular_Gabor_compute_tuples(self, inputImage, **kwargs):
                                                ϕ=π - tupla.ϕ) for tupla in self._Sf]
 
     for tupla, rotation, scale in itertools.product(operator, self.rotation_invariant, self.scale_invariant):
-        new_tupla = CosfireCircularGaborTuple(λ=tupla.λ * scale,
-                                              θ=tupla.θ + rotation,
-                                              ρ=tupla.ρ * scale,
-                                              ϕ=tupla.ϕ + rotation)
-        self._Sf_invariant.append(new_tupla)
+        self._Sf_invariant.append(CosfireCircularGaborTuple(λ=tupla.λ * scale,
+                                                            θ=tupla.θ + rotation,
+                                                            ρ=tupla.ρ * scale,
+                                                            ϕ=tupla.ϕ + rotation))
     unicos = {}
     for tupla in self._Sf_invariant:
         gabor_key = GaborKey(θ=tupla.θ, λ=tupla.λ)
@@ -433,7 +433,7 @@ def _Circular_DoG__fit_Sf(self, **kwargs):
 strategies_dictionary = {
     'Circular Gabor': {
         'fit_Sf': _Circular_Gabor__fit_Sf,
-        'compute_tuples': _Circular_Gabor_compute_tuples,
+        'compute_tuples': _Circular_Gabor__compute_tuples,
         'blur_gaussian': _Circular_Gabor__blur_gaussian,
         'compute_bank_of_responses': _Circular_Gabor__compute_bank_of_responses,
         'i_scale_cosfire': _Circular_Gabor__i_scale_cosfire,
