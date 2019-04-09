@@ -13,6 +13,7 @@ Introduction
        :maxdepth: 2
 
        api
+       cosfire
        auto_examples/index
 
 

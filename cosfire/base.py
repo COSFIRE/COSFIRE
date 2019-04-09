@@ -123,10 +123,8 @@ class Cosfire:
         self.prototype_image = X
         self._prototype_bank = self.compute_bank_of_responses(self.prototype_image)  # 1.1
         self.threshold_prototype_bank_of_responses(self.threshold_1)  # 1.2
-        # Manolo: I added the following optimization ---or error, check
-        self._prototype_bank = {key: value
-                                for key, value in self._prototype_bank.items()
-                                if value.max() > self._maximum_response * self.threshold_2}
+        # Manolo: This is an optimization possibility but requires to modify the iteration on θ, λ during the calculation of the pixel responses
+        # self._prototype_bank = {key: value for key, value in self._prototype_bank.items() if value.max() > self._maximum_response * self.threshold_2}
         self._Sf = self.fit_Sf()  # 1.3
 
     # 2-Apply the COSFIRE filter
@@ -360,10 +358,10 @@ def _Circular_Gabor__fit_Sf(self, **kwargs):
     ϕ_array = np.linspace(start=0, stop=2 * π, num=360, endpoint=False)
     for ρ in self.ρ_list:
         if ρ == 0:
-            for θ, λ in itertools.product(self.filter_parameters.θ, self.filter_parameters.λ):
-                response_at_ρ_ϕ = self._prototype_bank[GaborKey(θ=θ, λ=λ)][self.center_x][self.center_y]
+            for gabor_key, response in self._prototype_bank.items():
+                response_at_ρ_ϕ = response[self.center_x][self.center_y]
                 if response_at_ρ_ϕ > self._maximum_response * self.threshold_2:
-                    operator.append(CosfireCircularGaborTuple(λ=λ, θ=θ, ρ=0, ϕ=0))
+                    operator.append(CosfireCircularGaborTuple(λ=gabor_key.λ, θ=gabor_key.θ, ρ=0, ϕ=0))
         elif ρ > 0:
             pixel_at_ρ_ϕ_list = [Pixel(row=floor(self.center_x - ρ * sin(ϕ)), column=floor(self.center_y + ρ * cos(ϕ)))
                                  for ϕ in ϕ_array]

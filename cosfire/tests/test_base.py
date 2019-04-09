@@ -197,11 +197,7 @@ class TestCosfireCircularGabor(unittest.TestCase):
                                scale_invariant=[1],
                                rotation_invariant=[0]
                                )
-        some_cosfire.prototype_image = self.pattern
-        some_cosfire._prototype_bank = some_cosfire.compute_bank_of_responses(some_cosfire.prototype_image)
-        some_cosfire.threshold_prototype_bank_of_responses(some_cosfire.threshold_1)
-        # self.assertAlmostEqual(some_cosfire._maximum_response, 5060.316, places=3)
-        some_cosfire._Sf = some_cosfire.fit_Sf()
+        some_cosfire.fit(self.pattern)
         expected = [CosfireCircularGaborTuple(λ=7.5, θ=0.0, ρ=10, φ=1.3089969389957472),
                     CosfireCircularGaborTuple(λ=7.5, θ=0.0, ρ=10, φ=2.0420352248333655),
                     CosfireCircularGaborTuple(λ=7.5, θ=1.5707963267948966, ρ=10, φ=2.9845130209103035),
@@ -214,4 +210,5 @@ class TestCosfireCircularGabor(unittest.TestCase):
                     CosfireCircularGaborTuple(λ=7.5, θ=0.0, ρ=40, φ=1.6755160819145565),
                     CosfireCircularGaborTuple(λ=7.5, θ=1.5707963267948966, ρ=40, φ=3.351032163829113)]
 
-        self.assertEqual(some_cosfire._Sf, expected)
+        result = some_cosfire._Sf
+        self.assertEqual(result, expected)
