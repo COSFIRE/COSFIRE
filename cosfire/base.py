@@ -430,23 +430,9 @@ def _Circular_DoG__fit_Sf(self, **kwargs):
     return operator
 
 
+strategies_function_names = ['fit_Sf', 'compute_tuples', 'blur_gaussian', 'compute_bank_of_responses',
+                             'i_scale_cosfire', 'i_rotation_cosfire', 'i_reflection_cosfire', ]
 strategies_dictionary = {
-    'Circular Gabor': {
-        'fit_Sf': _Circular_Gabor__fit_Sf,
-        'compute_tuples': _Circular_Gabor__compute_tuples,
-        'blur_gaussian': _Circular_Gabor__blur_gaussian,
-        'compute_bank_of_responses': _Circular_Gabor__compute_bank_of_responses,
-        'i_scale_cosfire': _Circular_Gabor__i_scale_cosfire,
-        'i_rotation_cosfire': _Circular_Gabor__i_rotation_cosfire,
-        'i_reflection_cosfire': _Circular_Gabor__i_reflection_cosfire,
-    },
-    'Circular DoG': {
-        'fit_Sf': _Circular_DoG__fit_Sf,
-        'compute_tuples': _Circular_DoG__compute_tuples,
-        'blur_gaussian': _Circular_DoG__blur_gaussian,
-        'compute_bank_of_responses': _Circular_DoG__compute_bank_of_responses,
-        'i_scale_cosfire': _Circular_DoG__i_scale_cosfire,
-        'i_rotation_cosfire': _Circular_DoG__i_rotation_cosfire,
-        'i_reflection_cosfire': _Circular_DoG__i_reflection_cosfire,
-    },
+    outer_key: {key: globals()['_' + '_'.join(outer_key.split()) + '__' + key] for key in strategies_function_names}
+    for outer_key in ['Circular Gabor', 'Circular DoG']
 }

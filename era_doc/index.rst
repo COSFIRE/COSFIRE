@@ -3,18 +3,23 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to COSFIRE!
+Welcome to sklearn-template's documentation!
 ============================================
 
-Introduction
-------------
+This project is a reference implementation to anyone who wishes to develop
+scikit-learn compatible classes. It comes with a `template` module which
+contains a single estimator with unit tests.
+
 
     .. toctree::
        :maxdepth: 2
-
+       
        api
        auto_examples/index
+       ...
 
+See the `README <https://github.com/vighneshbirodkar/project-template/blob/master/README.md>`_
+for more information.
 
 
 Indices and tables
