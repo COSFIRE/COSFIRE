@@ -5,6 +5,7 @@ networkx
 nose>=1.1.2
 numpy
 numpydoc
+opencv
 pandas
 peakutils
 pillow
